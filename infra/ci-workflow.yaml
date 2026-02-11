@@ -1,0 +1,70 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: go-ko-ci-
+  namespace: argo
+spec:
+  entrypoint: ci-pipeline
+  # 빌드에 필요한 볼륨 (소스코드 공유용)
+  # 아르고 워크플로우의 각 단계(clone, build)는 서로 다른 독립된 파드(Pod)에서 실행됩니다. 
+  # 1단계에서 다운로드한 소스코드를 2단계 파드가 읽으려면 공통 저장소가 필요합니다
+  volumeClaimTemplates:
+  - metadata:
+      name: workdir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+
+  templates:
+  - name: ci-pipeline
+    dag: # Directed Acyclic Graph)
+      tasks:
+      - name: clone-source
+        template: git-clone
+      - name: ko-build-push
+        dependencies: [clone-source]
+        template: ko-build
+
+  # 1. 소스코드 클론 단계
+  - name: git-clone
+    container:
+      image: alpine/git
+      env:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-token
+            key: token
+      command: [sh, -c]
+      args: ["git clone https://${GITHUB_TOKEN}@github.com/gonflix/no24.git /src && cp -r /src/. /workspace/"]
+      volumeMounts:
+      - name: workdir
+        mountPath: /workspace
+
+  # 2. Ko 빌드 및 푸시 단계
+  - name: ko-build
+    container:
+      image: golang:1.21-alpine
+      env:
+      - name: KO_DOCKER_REPO
+        value: "docker.io/gonflix/no24" # 예: docker.io/myname
+      - name: DOCKER_CONFIG
+        value: /root/.docker
+      command: [sh, -c]
+      args: 
+        - |
+          go install github.com/google/ko@latest
+          cd /workspace
+          ko build --bare ./cmd/main.go
+      volumeMounts:
+      - name: workdir
+        mountPath: /workspace
+      - name: dockerhub-config
+        mountPath: /root/.docker/config.json
+        subPath: .dockerconfigjson
+    volumes:
+    - name: dockerhub-config
+      secret:
+        secretName: dockerhub-config
