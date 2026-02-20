@@ -19,7 +19,7 @@ spec:
 
   templates:
   - name: ci-pipeline
-    dag: # Directed Acyclic Graph)
+    dag: # Directed Acyclic Graph
       tasks:
       - name: clone-source
         template: git-clone
@@ -46,7 +46,7 @@ spec:
   # 2. Ko 빌드 및 푸시 단계
   - name: ko-build
     container:
-      image: golang:1.21-alpine
+      image: golang:1.25-alpine
       env:
       - name: KO_DOCKER_REPO
         value: "docker.io/gonflix/no24" # 예: docker.io/myname
@@ -56,8 +56,8 @@ spec:
       args: 
         - |
           go install github.com/google/ko@latest
-          cd /workspace
-          ko build --bare ./cmd/main.go
+          cd /workspace/api-server
+          ko build --bare ./cmd
       volumeMounts:
       - name: workdir
         mountPath: /workspace
