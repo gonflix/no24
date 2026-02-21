@@ -1,0 +1,23 @@
+# Stage 1: Build
+FROM golang:1.25-alpine AS builder
+WORKDIR /app
+# 의존성 파일만 먼저 복사하고 다운로드
+# 소스 코드가 바뀌어도 의존성이 그대로면 Docker 캐시를 재사용할 수 있어 빌드가 빨라집니다
+# COPY go.mod go.sum ./
+COPY go.mod ./
+RUN go mod download
+# 전체 소스 코드를 복사
+COPY . . 
+# 정적 컴파일을 통해 C 라이브러리 의존성 제거
+RUN CGO_ENABLED=0 GOOS=linux go build -o bin ./cmd
+
+# Stage 2: Final Image
+FROM alpine:3.18
+WORKDIR /root/
+# 빌드 단계에서 생성된 바이너리만 복사.
+# 소스 코드, Go SDK, 빌드 캐시 등은 최종 이미지에 포함되지 않아 이미지 크기가 매우 작아집니다.
+COPY --from=builder /app/bin .
+# 컨테이너가 8080 포트를 사용한다고 문서화합니다 (실제 포트 오픈은 docker run -p로 합니다).
+EXPOSE 8080
+# 컨테이너 실행 시 ./bin 바이너리를 실행합니다.
+CMD ["./bin"]

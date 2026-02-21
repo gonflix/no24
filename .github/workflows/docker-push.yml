@@ -1,0 +1,58 @@
+name: Build and Push Go & Java Services
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 1. Go 서버 빌드 및 푸시 (no24-api)
+      - name: Build and push Go API
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api-server # Go 프로젝트 폴더 경로
+          file: ./api-server/Dockerfile
+          push: true
+          tags: |
+            gonflix/no24-api:latest
+            gonflix/no24-api:${{ github.sha }}
+
+      # 2. Java 서버 빌드 및 푸시 (no24-svc)
+      - name: Build and push Java SVC
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ticketing-server # Java 프로젝트 폴더 경로
+          file: ./ticketing-server/Dockerfile
+          push: true
+          tags: |
+            gonflix/no24-svc:latest
+            gonflix/no24-svc:${{ github.sha }}
+
+      # (기존 빌드 단계 이후 추가)
+      - name: Update Kubernetes resources
+        run: |
+          # 예: kustomize나 sed를 이용해 deployment.yaml의 태그를 변경
+          cd infra
+          sed -i "s|gonflix/no24-api:.*|gonflix/no24-api:${{ github.sha }}|g" api-server-deploy.yaml
+          sed -i "s|gonflix/no24-svc:.*|gonflix/no24-svc:${{ github.sha }}|g" ticketing-server-deploy.yaml
+          
+          # 변경사항을 Git에 커밋하고 푸시
+          git config --global user.email "[EMAIL_ADDRESS]"
+          git config --global user.name "jinkyeong"
+          git add .
+          git commit -m "chore: update image tag to ${{ github.sha }}"
+          git push

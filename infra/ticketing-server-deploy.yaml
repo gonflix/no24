@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticketing-server-deployment
+  namespace: default
+  labels:
+    app: ticketing-server
+spec:
+#  replicas: 2 # 가용성을 위해 2개의 복제본 유지
+  selector:
+    matchLabels:
+      app: ticketing-server
+  template:
+    metadata:
+      labels:
+        app: ticketing-server
+    spec:
+      # 1. Docker Hub 인증을 위한 Secret 연결
+      imagePullSecrets:
+      - name: dockerhub-config
+      containers:
+      - name: ticketing-server-container
+        image: docker.io/gonflix/no24-svc:1.0
+#        ports:
+#        - containerPort: 8080 
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+#---
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: ticketing-server-service
+#  namespace: default
+#spec:
+#  selector:
+#    app: ticketing-server
+#  ports:
+#    - protocol: TCP
+#      port: 80        # 서비스가 외부로 노출할 포트
+#      targetPort: 8080 # 파드 내부의 앱 포트
+#  type: LoadBalancer  # MicroK8s 환경에서 외부 접속을 위해 사용

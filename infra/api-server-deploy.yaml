@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server-deployment
+  namespace: default
+  labels:
+    app: api-server
+spec:
+  replicas: 2 # 가용성을 위해 2개의 복제본 유지
+  selector:
+    matchLabels:
+      app: api-server
+  template:
+    metadata:
+      labels:
+        app: api-server
+    spec:
+      # 1. Docker Hub 인증을 위한 Secret 연결
+      imagePullSecrets:
+      - name: dockerhub-config
+      containers:
+      - name: api-server-container
+        image: docker.io/gonflix/no24-api:1.0
+        ports:
+        - containerPort: 8080 # Go 앱이 리스닝하는 포트
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-server-service
+  namespace: default
+spec:
+  selector:
+    app: api-server
+  ports:
+    - protocol: TCP
+      port: 80        # 서비스가 외부로 노출할 포트
+      targetPort: 8080 # 파드 내부의 앱 포트
+  type: LoadBalancer  # MicroK8s 환경에서 외부 접속을 위해 사용
