@@ -25,7 +25,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./api-server # Go 프로젝트 폴더 경로
-          file: ./api-server/Dockerfile
+          file: ./api-server/no24_api_Dockerfile
           push: true
           tags: |
             gonflix/no24-api:latest
@@ -36,7 +36,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./ticketing-server # Java 프로젝트 폴더 경로
-          file: ./ticketing-server/Dockerfile
+          file: ./ticketing-server/no24_svc_Dockerfile
           push: true
           tags: |
             gonflix/no24-svc:latest
