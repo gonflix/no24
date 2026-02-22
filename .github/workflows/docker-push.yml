@@ -4,6 +4,9 @@ on:
   push:
     branches: [ "main" ]
 
+permissions:
+  contents: write
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -33,7 +36,8 @@ jobs:
 
       # 2. Java 서버 빌드 및 푸시 (no24-svc)
       - name: Build and push Java SVC
-        uses: docker/build-push-action@v5
+        # 해킹으로 인한 토큰 탈취 방지위해 버전 고정
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 
         with:
           context: ./ticketing-server # Java 프로젝트 폴더 경로
           file: ./ticketing-server/no24_svc_Dockerfile
@@ -55,4 +59,4 @@ jobs:
           git config --global user.name "${{ github.actor }}"
           git add .
           git commit -m "chore: update image tag to ${{ github.sha }}"
-          git push
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
