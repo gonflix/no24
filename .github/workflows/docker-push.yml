@@ -51,8 +51,8 @@ jobs:
         run: |
           # 예: kustomize나 sed를 이용해 deployment.yaml의 태그를 변경
           cd infra
-          sed -i "s|gonflix/no24-api:.*|gonflix/no24-api:${{ github.sha }}|g" api-server-deploy.yaml
-          sed -i "s|gonflix/no24-svc:.*|gonflix/no24-svc:${{ github.sha }}|g" ticketing-server-deploy.yaml
+          sed -i "s|gonflix/no24-api:.*|gonflix/no24-api:${{ github.sha }}|g" api-server/deployment.yaml
+          sed -i "s|gonflix/no24-svc:.*|gonflix/no24-svc:${{ github.sha }}|g" ticketing-server/deployment.yaml
           
           # 변경사항을 Git에 커밋하고 푸시
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
