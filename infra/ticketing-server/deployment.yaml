@@ -20,7 +20,7 @@ spec:
       - name: dockerhub-config
       containers:
       - name: ticketing-server-container
-        image: docker.io/gonflix/no24-svc:1691a098ce35f28984dd8fb093e952238be26236
+        image: docker.io/gonflix/no24-svc:bc6b2c1f0c4d06c42863512df79aa1d7d1d39ae1
 #        ports:
 #        - containerPort: 8080 
         resources:
