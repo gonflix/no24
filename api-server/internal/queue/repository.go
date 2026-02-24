@@ -35,7 +35,6 @@ func (r *WaitingQueueRepository) Add(ctx context.Context, event_id string, user_
 		return -1, err
 	}
 	rank, err = r.getRank(ctx, event_id, user_id)
-
 	if err != nil {
 		return -1, err
 	}
