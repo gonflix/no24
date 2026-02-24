@@ -12,6 +12,7 @@ import (
 	"sync"
 	"syscall"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gonflix/no24/api-server/internal/queue"
 	svc "github.com/gonflix/no24/api-server/internal/service"
 	"github.com/gonflix/no24/api-server/internal/sse"
