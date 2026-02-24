@@ -106,7 +106,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 
 	rc := http.NewResponseController(c.Response())
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
 	_, err = wqRepository.Add(c.Request().Context(), eventID, userID)

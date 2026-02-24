@@ -16,20 +16,49 @@ type WaitingQueueRepository struct {
 	Snapshots *xsync.Map[string, *WaitingQueueSnapshot]
 }
 
-func NewWaitingQueueRepository() *WaitingQueueRepository {
-	return &WaitingQueueRepository{
-		client: redis.NewClient(&redis.Options{
-			Addr: "redis-service:6379", // 같은 클러스터 내에 있으므로 Service 이름으로 호스트 지정가능
-			// Password: "",
-			// DB: 0, // default DB
-		}),
+func NewWaitingQueueRepository(ctx context.Context) *WaitingQueueRepository {
+	// Redis Client 생성
+	client := redis.NewClient(&redis.Options{
+		Addr: "redis-service:6379", // 같은 클러스터 내에 있으므로 Service 이름으로 호스트 지정가능
+	})
+	if err := client.Ping(ctx).Err(); err != nil {
+		slog.Error("Redis 연결 실패", "error", err)
+	}
+
+	wqRepo := &WaitingQueueRepository{
+		client:    client,
 		Snapshots: xsync.NewMap[string, *WaitingQueueSnapshot](),
 		// key: "waiting:" + event_id,
 	}
+
+	// (MySQL) Active인 이벤트만 가져와서 Snapshot 초기화
+	err := wqRepo.InitSnapshot(ctx)
+	if err != nil {
+		slog.Error("InitSnapshot failed", "error", err)
+	}
+
+	return wqRepo
 }
+
+func (r *WaitingQueueRepository) InitSnapshot(ctx context.Context) error {
+	events, err := ReloadEvents(ctx)
+	if err != nil {
+		return err
+	}
+	for _, event := range events {
+		r.Snapshots.Store(event.Name, NewWaitingQueueSnapshot())
+	}
+	return nil
+}
+
 func (r *WaitingQueueRepository) Close() { r.client.Close() }
 
 func (r *WaitingQueueRepository) Add(ctx context.Context, event_id string, user_id int64) (rank int64, err error) {
+	ss, ok := r.Snapshots.Load(event_id)
+	if !ok {
+		return -1, ErrQueueEmpty
+	}
+
 	score, err := r.enqueue(ctx, event_id, user_id)
 	if err != nil {
 		return -1, err
@@ -39,7 +68,6 @@ func (r *WaitingQueueRepository) Add(ctx context.Context, event_id string, user_
 		return -1, err
 	}
 
-	ss, _ := r.Snapshots.LoadOrStore(event_id, NewWaitingQueueSnapshot())
 	ss.Add(user_id, rank, score)
 
 	return rank, nil

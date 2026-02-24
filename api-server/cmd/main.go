@@ -47,10 +47,13 @@ func init() {
 	// 3. 전역 로거로 설정 (선택 사항)
 	slog.SetDefault(logger)
 }
+
 func main() {
+	mainCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
 	// WaitingQueue Repository
-	wqRepository := queue.NewWaitingQueueRepository()
+	wqRepository := queue.NewWaitingQueueRepository(mainCtx)
 	defer wqRepository.Close()
 
 	// SSE Hub
@@ -60,9 +63,6 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
-
-	mainCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
 
 	// Routes
 	e.GET("/enter", func(c *echo.Context) error {
