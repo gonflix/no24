@@ -1,51 +1,58 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+
+	"github.com/gonflix/no24/api-server/internal/queue"
+	svc "github.com/gonflix/no24/api-server/internal/service"
+	"github.com/gonflix/no24/api-server/internal/sse"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
+)
 
 func main() {
-	fmt.Println("Hello from no24 API server!")
-	// mux := http.NewServeMux()
 
-	// mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-	// 	w.WriteHeader(http.StatusOK)
-	// 	fmt.Fprintln(w, "OK")
-	// })
+	// WaitingQueue Repository
+	wqRepository := queue.NewWaitingQueueRepository()
+	defer wqRepository.Close()
 
-	// mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	// 	w.WriteHeader(http.StatusOK)
-	// 	fmt.Fprintln(w, "Hello from no24 API server!")
-	// })
+	// SSE Hub
+	sseHub := sse.NewHub()
 
-	// server := &http.Server{
-	// 	Addr:         ":8080",
-	// 	Handler:      mux,
-	// 	ReadTimeout:  10 * time.Second,
-	// 	WriteTimeout: 10 * time.Second,
-	// 	IdleTimeout:  60 * time.Second,
-	// }
+	// Echo Instance
+	e := echo.New()
+	e.Use(middleware.RequestLogger())
+	e.Use(middleware.Recover())
 
-	// 별도 고루틴에서 서버 시작
-	// go func() {
-	// 	log.Printf("Server listening on %s", server.Addr)
-	// 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-	// 		log.Fatalf("Server failed to start: %v", err)
-	// 	}
-	// }()
+	mainCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
-	// OS 시그널 수신 채널 (SIGINT, SIGTERM)
-	// ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	// defer stop()
+	// Routes
+	e.GET("/enter", func(c *echo.Context) error {
+		return sseHub.HandleSSE(c, mainCtx, wqRepository)
+	})
 
-	// quit := make(chan os.Signal, 1)
-	// signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	// <-quit
+	var mainWG sync.WaitGroup
+	mainWG.Go(func() { // SSE Hub
+		sseHub.Run(mainCtx)
+	})
+	mainWG.Go(func() { // WaitingQueue Worker
+		svc.RunWaitingQueueWorkerAll(mainCtx, wqRepository, sseHub)
+	})
 
-	// 최대 30초 대기 후 강제 종료
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
+	sc := echo.StartConfig{Address: ":8080"}
+	if err := sc.Start(mainCtx, e); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Error(err.Error())
+	}
 
-	// if err := server.Shutdown(ctx); err != nil {
-	// 	log.Fatalf("Server forced to shutdown: %v", err)
-	// }
+	mainWG.Wait()
 
+	slog.Info("main done")
 }
