@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -17,6 +19,34 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
+func init() {
+	// 1. Handler 옵션 설정
+	opts := &slog.HandlerOptions{
+		AddSource: true, // 이 옵션이 caller(파일 및 라인) 정보를 추가합니다.
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			// 로그의 소스(caller) 정보인 경우 처리
+			if a.Key == slog.SourceKey {
+				source, ok := a.Value.Any().(*slog.Source)
+				if !ok {
+					return a
+				}
+				// 전체 경로에서 마지막 파일명만 추출 (예: /app/main.go -> main.go)
+				shortFile := filepath.Base(source.File)
+
+				// 파일명:라인번호 형식의 문자열로 변경하거나 다시 구조화
+				return slog.String("caller", fmt.Sprintf("%s:%d", shortFile, source.Line))
+			}
+			return a
+		},
+	}
+
+	// 2. JSON 포맷이나 Text 포맷 핸들러 생성
+	// 실무(Kubernetes/Cloud)에서는 파싱이 쉬운 JSONHandler를 주로 사용합니다.
+	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
+
+	// 3. 전역 로거로 설정 (선택 사항)
+	slog.SetDefault(logger)
+}
 func main() {
 
 	// WaitingQueue Repository

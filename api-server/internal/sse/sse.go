@@ -64,8 +64,8 @@ func (h *Hub) Run(ctx context.Context) {
 			h.channels[key] = info.ch
 
 		case key := <-h.unregister: // 채널 해제
-			delete(h.channels, key)
 			close(h.channels[key])
+			delete(h.channels, key)
 
 			// case message := <-h.broadcast:
 			// 	// 모든 클라이언트에게 동시에 전송 (Non-blocking 권장)?
@@ -109,6 +109,12 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
+	_, err = wqRepository.Add(c.Request().Context(), eventID, userID)
+	if err != nil {
+		slog.Error("sse add error", "error", err, "user_id", userID)
+		return err
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -129,6 +135,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 				slog.Error("sse flush error", "error", err, "user_id", userID)
 				continue
 			}
+			slog.Debug("sse write token", "user_id", userID, "token", token)
 
 		case <-ticker.C: // 주기적으로 순서 알림
 			rank, err := wqRepository.Get(c.Request().Context(), eventID, userID)
@@ -145,6 +152,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 				slog.Error("sse flush error", "error", err, "user_id", userID)
 				continue
 			}
+			slog.Debug("sse write resp", "user_id", userID, "rank", rank)
 		}
 	}
 }
