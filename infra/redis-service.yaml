@@ -50,7 +50,7 @@ metadata:
   name: redis-service
 spec:
   selector:
-    app: redis
+    app: redis-waiting-queue
   ports:
     - protocol: TCP
       port: 6379
