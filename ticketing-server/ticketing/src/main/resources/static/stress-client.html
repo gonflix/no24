@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ticketing Stress Client</title>
+  <style>
+    :root {
+      --bg: #f2f4f8;
+      --panel: #ffffff;
+      --line: #d8dee9;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --ok: #0f766e;
+      --bad: #b91c1c;
+      --accent: #0c4a6e;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top left, #dbeafe 0%, var(--bg) 45%, #e2e8f0 100%);
+      color: var(--text);
+      font-family: "Pretendard", "Noto Sans KR", sans-serif;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 24px auto;
+      padding: 0 16px;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    }
+
+    h1 { margin: 0 0 12px; font-size: 22px; color: #0f172a; }
+    h2 { margin: 0 0 10px; font-size: 16px; color: #0f172a; }
+
+    .grid { display: grid; gap: 10px; }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 14px;
+      color: var(--text);
+      background: #f8fafc;
+    }
+
+    textarea { min-height: 80px; resize: vertical; }
+
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      color: white;
+      background: var(--accent);
+    }
+
+    button.secondary { background: #334155; }
+    button.warn { background: #be123c; }
+
+    .metric {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .metric div {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #f8fafc;
+    }
+
+    .value { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+
+    pre {
+      margin: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 260px;
+      max-height: 440px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card" style="grid-column: 1 / -1;">
+      <h1>Ticketing Stress Client</h1>
+      <div class="grid grid-2">
+        <label>Base URL
+          <input id="baseUrl" value="http://localhost:8080" />
+        </label>
+        <label>JWT Bearer Token
+          <input id="jwtToken" placeholder="eyJ..." />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Seat Reservation Load</h2>
+      <div class="grid grid-2">
+        <label>Seat Prefix
+          <input id="seatPrefix" value="A-" />
+        </label>
+        <label>Seat Start Index
+          <input id="seatStart" type="number" value="1" min="1" />
+        </label>
+        <label>Total Requests
+          <input id="reserveTotal" type="number" value="200" min="1" />
+        </label>
+        <label>Concurrency
+          <input id="reserveConcurrency" type="number" value="20" min="1" />
+        </label>
+      </div>
+      <div class="btns" style="margin-top: 12px;">
+        <button id="runReserve">Run Reserve Test</button>
+      </div>
+      <div class="metric" style="margin-top: 12px;">
+        <div>Success<div id="reserveOk" class="value ok">0</div></div>
+        <div>Fail<div id="reserveFail" class="value bad">0</div></div>
+        <div>Avg ms<div id="reserveAvg" class="value">0</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Payment Load</h2>
+      <div class="grid grid-2">
+        <label>Amount
+          <input id="paymentAmount" type="number" value="10000" min="1" />
+        </label>
+        <label>Concurrency
+          <input id="paymentConcurrency" type="number" value="20" min="1" />
+        </label>
+      </div>
+      <label style="margin-top: 10px;">Reservation IDs (one per line, empty = use latest reserve success list)
+        <textarea id="reservationIds"></textarea>
+      </label>
+      <div class="btns" style="margin-top: 12px;">
+        <button id="runPayment">Run Payment Test</button>
+      </div>
+      <div class="metric" style="margin-top: 12px;">
+        <div>Accepted<div id="paymentOk" class="value ok">0</div></div>
+        <div>Rejected<div id="paymentFail" class="value bad">0</div></div>
+        <div>Avg ms<div id="paymentAvg" class="value">0</div></div>
+      </div>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2>Run Log</h2>
+      <div class="btns" style="margin-bottom: 10px;">
+        <button id="clearLog" class="secondary">Clear Log</button>
+      </div>
+      <pre id="log"></pre>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      latestReservationIds: []
+    };
+
+    const el = (id) => document.getElementById(id);
+
+    function ts() {
+      return new Date().toISOString();
+    }
+
+    function logLine(message) {
+      const box = el("log");
+      box.textContent += `[${ts()}] ${message}\n`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function getAuthHeader() {
+      const token = el("jwtToken").value.trim();
+      if (!token) {
+        throw new Error("JWT Bearer token is required.");
+      }
+      return { Authorization: `Bearer ${token}` };
+    }
+
+    async function sendJson(url, payload) {
+      const start = performance.now();
+      let response;
+      let body = null;
+
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeader()
+          },
+          body: JSON.stringify(payload)
+        });
+
+        try {
+          body = await response.json();
+        } catch (_) {
+          body = null;
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          status: 0,
+          elapsed: Math.round(performance.now() - start),
+          body: { message: error.message }
+        };
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        elapsed: Math.round(performance.now() - start),
+        body
+      };
+    }
+
+    async function runConcurrent(items, concurrency, worker) {
+      let next = 0;
+      const results = [];
+
+      async function runWorker(workerNo) {
+        while (true) {
+          const idx = next++;
+          if (idx >= items.length) {
+            return;
+          }
+          results[idx] = await worker(items[idx], idx, workerNo);
+        }
+      }
+
+      const workers = Array.from({ length: Math.min(concurrency, items.length) }, (_, i) => runWorker(i + 1));
+      await Promise.all(workers);
+      return results;
+    }
+
+    function summarizeAndRender(results, okEl, failEl, avgEl) {
+      let ok = 0;
+      let fail = 0;
+      let sum = 0;
+
+      for (const r of results) {
+        sum += r.elapsed;
+        if (r.ok) {
+          ok++;
+        } else {
+          fail++;
+        }
+      }
+
+      const avg = results.length ? Math.round(sum / results.length) : 0;
+      el(okEl).textContent = String(ok);
+      el(failEl).textContent = String(fail);
+      el(avgEl).textContent = String(avg);
+      return { ok, fail, avg };
+    }
+
+    async function runReserveTest() {
+      const base = el("baseUrl").value.trim().replace(/\/$/, "");
+      const prefix = el("seatPrefix").value.trim() || "A-";
+      const start = Number(el("seatStart").value);
+      const total = Number(el("reserveTotal").value);
+      const concurrency = Number(el("reserveConcurrency").value);
+
+      if (!Number.isFinite(start) || !Number.isFinite(total) || !Number.isFinite(concurrency) || total < 1 || concurrency < 1) {
+        logLine("[reserve] invalid input values");
+        return;
+      }
+
+      const seats = Array.from({ length: total }, (_, i) => `${prefix}${start + i}`);
+      logLine(`[reserve] start total=${total}, concurrency=${concurrency}`);
+
+      const results = await runConcurrent(seats, concurrency, async (seatId) => {
+        const res = await sendJson(`${base}/api/seats/reserve`, { seatId });
+        if (!res.ok) {
+          logLine(`[reserve] FAIL seat=${seatId}, status=${res.status}, message=${res.body?.message || "n/a"}`);
+        }
+        return { ...res, seatId };
+      });
+
+      state.latestReservationIds = results
+        .filter((r) => r.ok && r.body?.data?.reservationId)
+        .map((r) => r.body.data.reservationId);
+
+      const summary = summarizeAndRender(results, "reserveOk", "reserveFail", "reserveAvg");
+      logLine(`[reserve] done ok=${summary.ok}, fail=${summary.fail}, avgMs=${summary.avg}, reservationIds=${state.latestReservationIds.length}`);
+      el("reservationIds").value = state.latestReservationIds.join("\n");
+    }
+
+    async function runPaymentTest() {
+      const base = el("baseUrl").value.trim().replace(/\/$/, "");
+      const amount = Number(el("paymentAmount").value);
+      const concurrency = Number(el("paymentConcurrency").value);
+
+      if (!Number.isFinite(amount) || amount < 1 || !Number.isFinite(concurrency) || concurrency < 1) {
+        logLine("[payment] invalid input values");
+        return;
+      }
+
+      const fromText = el("reservationIds").value
+        .split(/\r?\n/)
+        .map((v) => v.trim())
+        .filter(Boolean);
+      const reservationIds = fromText.length ? fromText : state.latestReservationIds;
+
+      if (!reservationIds.length) {
+        logLine("[payment] no reservation ids found");
+        return;
+      }
+
+      logLine(`[payment] start total=${reservationIds.length}, concurrency=${concurrency}`);
+
+      const results = await runConcurrent(reservationIds, concurrency, async (reservationId) => {
+        const res = await sendJson(`${base}/api/payments/request`, { reservationId, amount });
+        if (!res.ok) {
+          logLine(`[payment] FAIL reservation=${reservationId}, status=${res.status}, message=${res.body?.message || "n/a"}`);
+        }
+        return { ...res, reservationId };
+      });
+
+      const summary = summarizeAndRender(results, "paymentOk", "paymentFail", "paymentAvg");
+      logLine(`[payment] done accepted=${summary.ok}, rejected=${summary.fail}, avgMs=${summary.avg}`);
+    }
+
+    el("runReserve").addEventListener("click", async () => {
+      try {
+        await runReserveTest();
+      } catch (error) {
+        logLine(`[reserve] aborted: ${error.message}`);
+      }
+    });
+
+    el("runPayment").addEventListener("click", async () => {
+      try {
+        await runPaymentTest();
+      } catch (error) {
+        logLine(`[payment] aborted: ${error.message}`);
+      }
+    });
+
+    el("clearLog").addEventListener("click", () => {
+      el("log").textContent = "";
+    });
+
+    logLine("ready");
+  </script>
+</body>
+</html>

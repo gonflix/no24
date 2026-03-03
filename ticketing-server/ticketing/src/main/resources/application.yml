@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ticketing
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: ticketing-payment
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.ticketing.ticketing.kafka
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ""
+
+app:
+  jwt:
+    secret: "change-this-secret-key-to-a-long-random-string-32bytes"
+    expiration-seconds: 3600
+  kafka:
+    payment-topic: payment.requested.v1
