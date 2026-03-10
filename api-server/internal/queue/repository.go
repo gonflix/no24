@@ -105,7 +105,7 @@ func (r *WaitingQueueRepository) enqueue(ctx context.Context, event_id string, u
 
 	err = r.client.ZAdd(ctx, buildKey(event_id), redis.Z{
 		Score:  score,
-		Member: user_id,
+		Member: strconv.FormatInt(user_id, 10),
 	}).Err()
 	return score, err
 }
@@ -141,7 +141,8 @@ func (r *WaitingQueueRepository) dequeue(ctx context.Context, event_id string) (
 }
 
 func (r *WaitingQueueRepository) getRank(ctx context.Context, event_id string, user_id int64) (rank int64, err error) {
-	rank, err = r.client.ZRank(ctx, buildKey(event_id), strconv.FormatInt(user_id, 10)).Result()
+	user_id_str := strconv.FormatInt(user_id, 10)
+	rank, err = r.client.ZRank(ctx, buildKey(event_id), user_id_str).Result()
 	if err != nil {
 		return -1, err
 	}
