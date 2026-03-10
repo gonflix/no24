@@ -76,6 +76,8 @@ func waitingQueueWorker(ctx context.Context, event_id string, wqRepository *queu
 				continue
 			}
 
+			slog.Info("waitingQueueWorker pop user", "event_id", event_id, "user_id", user_id, "token", token)
+
 			// SSE로 토큰 전달
 			sseHub.SendToken(ctx, user_id, event_id, token)
 
