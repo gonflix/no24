@@ -13,7 +13,7 @@ import (
 
 const TOKEN_DURATION = 10 * time.Minute
 
-var mySigningKey = []byte("TempKey1234")
+const mySigningKey = "71c150277be553d6c584b7a7bc403bfa9a01935c49a0cb8e872516f712086291"
 
 func createJWT(user_id int64, event_id string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{

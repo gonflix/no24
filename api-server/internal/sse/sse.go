@@ -106,14 +106,14 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 
 	rc := http.NewResponseController(c.Response())
 
-	ticker := time.NewTicker(3 * time.Second)
-	defer ticker.Stop()
-
 	_, err = wqRepository.Add(c.Request().Context(), eventID, userID)
 	if err != nil {
 		slog.Error("sse add error", "error", err, "user_id", userID)
 		return err
 	}
+
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {

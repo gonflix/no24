@@ -3,27 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ticketing Stress Client</title>
+  <title>Ticketing E2E Stress Client</title>
   <style>
     :root {
-      --bg: #f2f4f8;
+      --bg: #eef2ff;
       --panel: #ffffff;
-      --line: #d8dee9;
-      --text: #1f2937;
-      --muted: #6b7280;
+      --line: #cfd8e3;
+      --text: #1e293b;
+      --muted: #64748b;
       --ok: #0f766e;
       --bad: #b91c1c;
-      --accent: #0c4a6e;
+      --accent: #0b4f6c;
     }
-
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: radial-gradient(circle at top left, #dbeafe 0%, var(--bg) 45%, #e2e8f0 100%);
+      background: radial-gradient(circle at 10% 0%, #dbeafe 0%, var(--bg) 45%, #e2e8f0 100%);
       color: var(--text);
       font-family: "Pretendard", "Noto Sans KR", sans-serif;
     }
-
     .wrap {
       max-width: 1200px;
       margin: 24px auto;
@@ -32,29 +30,20 @@
       gap: 16px;
       grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
     }
-
     .card {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 14px;
       padding: 16px;
-      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 7px 18px rgba(15, 23, 42, 0.08);
     }
-
-    h1 { margin: 0 0 12px; font-size: 22px; color: #0f172a; }
-    h2 { margin: 0 0 10px; font-size: 16px; color: #0f172a; }
-
+    h1 { margin: 0 0 12px; font-size: 23px; }
+    h2 { margin: 0 0 10px; font-size: 16px; }
     .grid { display: grid; gap: 10px; }
     .grid-2 { grid-template-columns: 1fr 1fr; }
-
-    label {
-      display: grid;
-      gap: 6px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    input, textarea {
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+    input {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -63,42 +52,32 @@
       color: var(--text);
       background: #f8fafc;
     }
-
-    textarea { min-height: 80px; resize: vertical; }
-
     .btns { display: flex; gap: 8px; flex-wrap: wrap; }
-
     button {
       border: 0;
       border-radius: 8px;
       padding: 10px 12px;
       font-size: 14px;
       cursor: pointer;
-      color: white;
+      color: #fff;
       background: var(--accent);
     }
-
     button.secondary { background: #334155; }
-    button.warn { background: #be123c; }
-
     .metric {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
       font-size: 13px;
     }
-
     .metric div {
       border: 1px solid var(--line);
       border-radius: 10px;
       padding: 10px;
       background: #f8fafc;
     }
-
-    .value { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .value { font-size: 18px; font-weight: 700; }
     .ok { color: var(--ok); }
     .bad { color: var(--bad); }
-
     pre {
       margin: 0;
       background: #0f172a;
@@ -106,7 +85,7 @@
       border-radius: 10px;
       padding: 12px;
       min-height: 260px;
-      max-height: 440px;
+      max-height: 420px;
       overflow: auto;
       font-size: 12px;
       line-height: 1.45;
@@ -117,80 +96,93 @@
 <body>
   <div class="wrap">
     <section class="card" style="grid-column: 1 / -1;">
-      <h1>Ticketing Stress Client</h1>
+      <h1>E2E Stress Client</h1>
       <div class="grid grid-2">
-        <label>Base URL
-          <input id="baseUrl" value="http://localhost:8080" />
+        <label>Queue Server Base URL
+          <input id="queueBaseUrl" value="http://localhost:80" />
         </label>
-        <label>JWT Bearer Token
-          <input id="jwtToken" placeholder="eyJ..." />
+        <label>Ticketing Server Base URL
+          <input id="ticketingBaseUrl" value="http://localhost:81" />
         </label>
       </div>
     </section>
 
     <section class="card">
-      <h2>Seat Reservation Load</h2>
+      <h2>Queue API</h2>
+      <div class="grid">
+        <label>Queue Enter Path (SSE GET)
+          <input id="queueEnterPath" value="/enter" />
+        </label>
+        <label>Event ID (event_id)
+          <input id="eventId" value="bts_2026_seoul" />
+        </label>
+        <label>User ID Start (user_id int64)
+          <input id="userIdStart" value="1000001" />
+        </label>
+      </div>
+      <div class="grid grid-3" style="margin-top: 10px;">
+        <label>Queue Timeout sec
+          <input id="queueTimeoutSec" type="number" value="60" min="1" />
+        </label>
+        <label>Payment Amount
+          <input id="paymentAmount" type="number" value="10000" min="1" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Load Options</h2>
       <div class="grid grid-2">
+        <label>Total Users
+          <input id="totalUsers" type="number" value="100" min="1" />
+        </label>
+        <label>Concurrency
+          <input id="concurrency" type="number" value="20" min="1" />
+        </label>
         <label>Seat Prefix
           <input id="seatPrefix" value="A-" />
         </label>
         <label>Seat Start Index
           <input id="seatStart" type="number" value="1" min="1" />
         </label>
-        <label>Total Requests
-          <input id="reserveTotal" type="number" value="200" min="1" />
+      </div>
+      <div class="grid grid-2" style="margin-top: 10px;">
+        <label>Random Wait Min sec
+          <input id="waitMinSec" type="number" value="1" min="0" />
         </label>
-        <label>Concurrency
-          <input id="reserveConcurrency" type="number" value="20" min="1" />
+        <label>Random Wait Max sec
+          <input id="waitMaxSec" type="number" value="5" min="0" />
         </label>
       </div>
       <div class="btns" style="margin-top: 12px;">
-        <button id="runReserve">Run Reserve Test</button>
-      </div>
-      <div class="metric" style="margin-top: 12px;">
-        <div>Success<div id="reserveOk" class="value ok">0</div></div>
-        <div>Fail<div id="reserveFail" class="value bad">0</div></div>
-        <div>Avg ms<div id="reserveAvg" class="value">0</div></div>
+        <button id="runE2E">Run E2E Test</button>
+        <button id="clearLog" class="secondary">Clear Log</button>
       </div>
     </section>
 
-    <section class="card">
-      <h2>Payment Load</h2>
-      <div class="grid grid-2">
-        <label>Amount
-          <input id="paymentAmount" type="number" value="10000" min="1" />
-        </label>
-        <label>Concurrency
-          <input id="paymentConcurrency" type="number" value="20" min="1" />
-        </label>
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2>Metrics</h2>
+      <div class="metric">
+        <div>JWT 획득<div id="jwtOk" class="value ok">0</div></div>
+        <div>좌석 성공<div id="reserveOk" class="value ok">0</div></div>
+        <div>결제요청 성공<div id="paymentOk" class="value ok">0</div></div>
+        <div>실패<div id="totalFail" class="value bad">0</div></div>
       </div>
-      <label style="margin-top: 10px;">Reservation IDs (one per line, empty = use latest reserve success list)
-        <textarea id="reservationIds"></textarea>
-      </label>
-      <div class="btns" style="margin-top: 12px;">
-        <button id="runPayment">Run Payment Test</button>
-      </div>
-      <div class="metric" style="margin-top: 12px;">
-        <div>Accepted<div id="paymentOk" class="value ok">0</div></div>
-        <div>Rejected<div id="paymentFail" class="value bad">0</div></div>
-        <div>Avg ms<div id="paymentAvg" class="value">0</div></div>
+      <div class="metric" style="margin-top: 8px;">
+        <div>평균 전체 ms<div id="avgTotalMs" class="value">0</div></div>
+        <div>평균 줄서기 ms<div id="avgQueueMs" class="value">0</div></div>
+        <div>평균 좌석 ms<div id="avgReserveMs" class="value">0</div></div>
+        <div>평균 결제 ms<div id="avgPaymentMs" class="value">0</div></div>
       </div>
     </section>
 
     <section class="card" style="grid-column: 1 / -1;">
       <h2>Run Log</h2>
-      <div class="btns" style="margin-bottom: 10px;">
-        <button id="clearLog" class="secondary">Clear Log</button>
-      </div>
       <pre id="log"></pre>
     </section>
   </div>
 
   <script>
-    const state = {
-      latestReservationIds: []
-    };
-
     const el = (id) => document.getElementById(id);
 
     function ts() {
@@ -203,41 +195,50 @@
       box.scrollTop = box.scrollHeight;
     }
 
-    function getAuthHeader() {
-      const token = el("jwtToken").value.trim();
-      if (!token) {
-        throw new Error("JWT Bearer token is required.");
-      }
-      return { Authorization: `Bearer ${token}` };
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
-    async function sendJson(url, payload) {
-      const start = performance.now();
-      let response;
-      let body = null;
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
 
-      try {
-        response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...getAuthHeader()
-          },
-          body: JSON.stringify(payload)
-        });
+    function toUrl(base, path) {
+      return `${base.replace(/\/$/, "")}${path.startsWith("/") ? "" : "/"}${path}`;
+    }
 
-        try {
-          body = await response.json();
-        } catch (_) {
-          body = null;
+    function pick(obj, keys) {
+      for (const key of keys) {
+        if (obj && Object.prototype.hasOwnProperty.call(obj, key) && obj[key]) {
+          return obj[key];
         }
-      } catch (error) {
-        return {
-          ok: false,
-          status: 0,
-          elapsed: Math.round(performance.now() - start),
-          body: { message: error.message }
-        };
+      }
+      return null;
+    }
+
+    function extractJwt(responseBody) {
+      const root = responseBody || {};
+      const data = root.data || {};
+      return pick(data, ["jwt", "token", "accessToken", "jwtToken"]) ||
+             pick(root, ["jwt", "token", "accessToken", "jwtToken"]);
+    }
+
+    async function postJson(url, payload, headers = {}) {
+      const start = performance.now();
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers
+        },
+        body: JSON.stringify(payload)
+      });
+
+      let body = null;
+      try {
+        body = await response.json();
+      } catch (_) {
+        body = null;
       }
 
       return {
@@ -248,126 +249,272 @@
       };
     }
 
+    function parseJwtFromSseData(rawData) {
+      if (!rawData) {
+        console.warn("Received empty SSE data");
+        return null;
+      }
+
+      const trimmed = String(rawData).trim();
+      if (!trimmed) {
+        return null;
+      }
+
+      try {
+        const parsed = JSON.parse(trimmed);
+        return extractJwt(parsed);
+      } catch (_) {
+        console.error("Failed to parse SSE data as JSON, falling back to raw string:", rawData);
+        // Non-JSON SSE payload can be plain JWT token
+      }
+
+      if (trimmed.split(".").length === 3) {
+        return trimmed;
+      }
+      return null;
+    }
+
+    async function acquireJwtViaSse(eventId, userId, queueBaseUrl, queueEnterPath, queueTimeoutSec) {
+      const queueStartedAt = performance.now();
+      const url = new URL(toUrl(queueBaseUrl, queueEnterPath));
+      url.searchParams.set("event_id", String(eventId));
+      url.searchParams.set("user_id", String(userId));
+
+      return await new Promise((resolve, reject) => {
+        let done = false;
+        const source = new EventSource(url.toString());
+
+        const finishSuccess = (token) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timeoutId);
+          source.close();
+          resolve({
+            jwt: token,
+            queueElapsed: Math.round(performance.now() - queueStartedAt)
+          });
+        };
+
+        const finishFail = (message) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timeoutId);
+          source.close();
+          reject(new Error(message));
+        };
+
+        const timeoutId = setTimeout(() => {
+          finishFail(`queue timeout via sse event_id=${eventId}, user_id=${userId}`);
+        }, queueTimeoutSec * 1000);
+
+        source.onmessage = (event) => {
+          const token = parseJwtFromSseData(event.data);
+          if (token) {
+            finishSuccess(token);
+          }
+        };
+
+        source.addEventListener("token", (event) => {
+          const token = parseJwtFromSseData(event.data);
+          if (token) {
+            finishSuccess(token);
+          }
+        });
+
+        source.onerror = () => {
+          // keep waiting until timeout; EventSource may reconnect automatically
+        };
+      });
+    }
+
+    async function runOneUser(userNo, seatId, cfg) {
+      const totalStart = performance.now();
+      const userId = (cfg.userIdStartBig + BigInt(userNo - 1)).toString();
+
+      try {
+        const queueResult = await acquireJwtViaSse(
+          cfg.eventId,
+          userId,
+          cfg.queueBaseUrl,
+          cfg.queueEnterPath,
+          cfg.queueTimeoutSec
+        );
+
+        const reserveUrl = toUrl(cfg.ticketingBaseUrl, "/api/seats/reserve");
+        const reserve = await postJson(reserveUrl, { seatId }, {
+          Authorization: `Bearer ${queueResult.jwt}`
+        });
+
+        if (!reserve.ok) {
+          return {
+            ok: false,
+            stage: "reserve",
+            queueElapsed: queueResult.queueElapsed,
+            reserveElapsed: reserve.elapsed,
+            paymentElapsed: 0,
+            totalElapsed: Math.round(performance.now() - totalStart),
+            message: `reserve failed status=${reserve.status}`
+          };
+        }
+
+        const reservationId = reserve.body?.data?.reservationId;
+        if (!reservationId) {
+          return {
+            ok: false,
+            stage: "reserve",
+            queueElapsed: queueResult.queueElapsed,
+            reserveElapsed: reserve.elapsed,
+            paymentElapsed: 0,
+            totalElapsed: Math.round(performance.now() - totalStart),
+            message: "reservationId missing in response"
+          };
+        }
+
+        const waitSec = randomInt(cfg.waitMinSec, cfg.waitMaxSec);
+        await sleep(waitSec * 1000);
+
+        const paymentUrl = toUrl(cfg.ticketingBaseUrl, "/api/payments/request");
+        const payment = await postJson(paymentUrl, {
+          reservationId,
+          amount: cfg.paymentAmount
+        }, {
+          Authorization: `Bearer ${queueResult.jwt}`
+        });
+
+        if (!payment.ok) {
+          return {
+            ok: false,
+            stage: "payment",
+            queueElapsed: queueResult.queueElapsed,
+            reserveElapsed: reserve.elapsed,
+            paymentElapsed: payment.elapsed,
+            totalElapsed: Math.round(performance.now() - totalStart),
+            message: `payment failed status=${payment.status}`
+          };
+        }
+
+        return {
+          ok: true,
+          stage: "done",
+          queueElapsed: queueResult.queueElapsed,
+          reserveElapsed: reserve.elapsed,
+          paymentElapsed: payment.elapsed,
+          totalElapsed: Math.round(performance.now() - totalStart)
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          stage: "queue",
+          queueElapsed: 0,
+          reserveElapsed: 0,
+          paymentElapsed: 0,
+          totalElapsed: Math.round(performance.now() - totalStart),
+          message: error.message || String(error)
+        };
+      }
+    }
+
     async function runConcurrent(items, concurrency, worker) {
       let next = 0;
       const results = [];
 
-      async function runWorker(workerNo) {
+      async function runWorker() {
         while (true) {
           const idx = next++;
           if (idx >= items.length) {
             return;
           }
-          results[idx] = await worker(items[idx], idx, workerNo);
+          results[idx] = await worker(items[idx], idx);
         }
       }
 
-      const workers = Array.from({ length: Math.min(concurrency, items.length) }, (_, i) => runWorker(i + 1));
+      const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runWorker());
       await Promise.all(workers);
       return results;
     }
 
-    function summarizeAndRender(results, okEl, failEl, avgEl) {
-      let ok = 0;
-      let fail = 0;
-      let sum = 0;
-
-      for (const r of results) {
-        sum += r.elapsed;
-        if (r.ok) {
-          ok++;
-        } else {
-          fail++;
-        }
-      }
-
-      const avg = results.length ? Math.round(sum / results.length) : 0;
-      el(okEl).textContent = String(ok);
-      el(failEl).textContent = String(fail);
-      el(avgEl).textContent = String(avg);
-      return { ok, fail, avg };
+    function avg(arr) {
+      return arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
     }
 
-    async function runReserveTest() {
-      const base = el("baseUrl").value.trim().replace(/\/$/, "");
-      const prefix = el("seatPrefix").value.trim() || "A-";
-      const start = Number(el("seatStart").value);
-      const total = Number(el("reserveTotal").value);
-      const concurrency = Number(el("reserveConcurrency").value);
+    async function runE2E() {
+      const cfg = {
+        queueBaseUrl: el("queueBaseUrl").value.trim(),
+        ticketingBaseUrl: el("ticketingBaseUrl").value.trim(),
+        queueEnterPath: el("queueEnterPath").value.trim(),
+        eventId: el("eventId").value.trim(),
+        userIdStartRaw: el("userIdStart").value.trim(),
+        queueTimeoutSec: Number(el("queueTimeoutSec").value),
+        paymentAmount: Number(el("paymentAmount").value),
+        totalUsers: Number(el("totalUsers").value),
+        concurrency: Number(el("concurrency").value),
+        seatPrefix: el("seatPrefix").value.trim() || "A-",
+        seatStart: Number(el("seatStart").value),
+        waitMinSec: Number(el("waitMinSec").value),
+        waitMaxSec: Number(el("waitMaxSec").value)
+      };
 
-      if (!Number.isFinite(start) || !Number.isFinite(total) || !Number.isFinite(concurrency) || total < 1 || concurrency < 1) {
-        logLine("[reserve] invalid input values");
+      if (!cfg.queueBaseUrl || !cfg.ticketingBaseUrl || !cfg.queueEnterPath || !cfg.eventId) {
+        logLine("입력값 오류: URL/path를 확인하세요.");
         return;
       }
 
-      const seats = Array.from({ length: total }, (_, i) => `${prefix}${start + i}`);
-      logLine(`[reserve] start total=${total}, concurrency=${concurrency}`);
+      if (!/^[0-9]+$/.test(cfg.userIdStartRaw)) {
+        logLine("입력값 오류: user_id 시작값은 0 이상의 정수여야 합니다.");
+        return;
+      }
+      cfg.userIdStartBig = BigInt(cfg.userIdStartRaw);
 
-      const results = await runConcurrent(seats, concurrency, async (seatId) => {
-        const res = await sendJson(`${base}/api/seats/reserve`, { seatId });
-        if (!res.ok) {
-          logLine(`[reserve] FAIL seat=${seatId}, status=${res.status}, message=${res.body?.message || "n/a"}`);
-        }
-        return { ...res, seatId };
-      });
-
-      state.latestReservationIds = results
-        .filter((r) => r.ok && r.body?.data?.reservationId)
-        .map((r) => r.body.data.reservationId);
-
-      const summary = summarizeAndRender(results, "reserveOk", "reserveFail", "reserveAvg");
-      logLine(`[reserve] done ok=${summary.ok}, fail=${summary.fail}, avgMs=${summary.avg}, reservationIds=${state.latestReservationIds.length}`);
-      el("reservationIds").value = state.latestReservationIds.join("\n");
-    }
-
-    async function runPaymentTest() {
-      const base = el("baseUrl").value.trim().replace(/\/$/, "");
-      const amount = Number(el("paymentAmount").value);
-      const concurrency = Number(el("paymentConcurrency").value);
-
-      if (!Number.isFinite(amount) || amount < 1 || !Number.isFinite(concurrency) || concurrency < 1) {
-        logLine("[payment] invalid input values");
+      if ([cfg.queueTimeoutSec, cfg.paymentAmount, cfg.totalUsers, cfg.concurrency, cfg.seatStart, cfg.waitMinSec, cfg.waitMaxSec]
+        .some((v) => !Number.isFinite(v) || v < 0)) {
+        logLine("입력값 오류: 숫자 항목을 확인하세요.");
         return;
       }
 
-      const fromText = el("reservationIds").value
-        .split(/\r?\n/)
-        .map((v) => v.trim())
-        .filter(Boolean);
-      const reservationIds = fromText.length ? fromText : state.latestReservationIds;
-
-      if (!reservationIds.length) {
-        logLine("[payment] no reservation ids found");
+      if (cfg.totalUsers < 1 || cfg.concurrency < 1 || cfg.paymentAmount < 1) {
+        logLine("입력값 오류: totalUsers/concurrency/paymentAmount는 1 이상이어야 합니다.");
         return;
       }
 
-      logLine(`[payment] start total=${reservationIds.length}, concurrency=${concurrency}`);
+      if (cfg.waitMinSec > cfg.waitMaxSec) {
+        logLine("입력값 오류: waitMinSec <= waitMaxSec 여야 합니다.");
+        return;
+      }
 
-      const results = await runConcurrent(reservationIds, concurrency, async (reservationId) => {
-        const res = await sendJson(`${base}/api/payments/request`, { reservationId, amount });
-        if (!res.ok) {
-          logLine(`[payment] FAIL reservation=${reservationId}, status=${res.status}, message=${res.body?.message || "n/a"}`);
+      const seats = Array.from({ length: cfg.totalUsers }, (_, i) => `${cfg.seatPrefix}${cfg.seatStart + i}`);
+      logLine(`E2E start users=${cfg.totalUsers}, concurrency=${cfg.concurrency}`);
+
+      const results = await runConcurrent(seats, cfg.concurrency, (seatId, idx) => runOneUser(idx + 1, seatId, cfg));
+
+      const jwtOk = results.filter((r) => r.queueElapsed > 0).length;
+      const reserveOk = results.filter((r) => r.reserveElapsed > 0 && (r.stage === "payment" || r.stage === "done")).length;
+      const paymentOk = results.filter((r) => r.ok).length;
+      const fail = results.length - paymentOk;
+
+      el("jwtOk").textContent = String(jwtOk);
+      el("reserveOk").textContent = String(reserveOk);
+      el("paymentOk").textContent = String(paymentOk);
+      el("totalFail").textContent = String(fail);
+
+      el("avgTotalMs").textContent = String(avg(results.map((r) => r.totalElapsed)));
+      el("avgQueueMs").textContent = String(avg(results.filter((r) => r.queueElapsed > 0).map((r) => r.queueElapsed)));
+      el("avgReserveMs").textContent = String(avg(results.filter((r) => r.reserveElapsed > 0).map((r) => r.reserveElapsed)));
+      el("avgPaymentMs").textContent = String(avg(results.filter((r) => r.paymentElapsed > 0).map((r) => r.paymentElapsed)));
+
+      for (let i = 0; i < results.length; i++) {
+        if (!results[i].ok) {
+          logLine(`FAIL user=${i + 1}, stage=${results[i].stage}, message=${results[i].message}`);
         }
-        return { ...res, reservationId };
-      });
+      }
 
-      const summary = summarizeAndRender(results, "paymentOk", "paymentFail", "paymentAvg");
-      logLine(`[payment] done accepted=${summary.ok}, rejected=${summary.fail}, avgMs=${summary.avg}`);
+      logLine(`E2E done paymentOk=${paymentOk}, fail=${fail}`);
     }
 
-    el("runReserve").addEventListener("click", async () => {
+    el("runE2E").addEventListener("click", async () => {
       try {
-        await runReserveTest();
+        await runE2E();
       } catch (error) {
-        logLine(`[reserve] aborted: ${error.message}`);
-      }
-    });
-
-    el("runPayment").addEventListener("click", async () => {
-      try {
-        await runPaymentTest();
-      } catch (error) {
-        logLine(`[payment] aborted: ${error.message}`);
+        logLine(`E2E aborted: ${error.message}`);
       }
     });
 

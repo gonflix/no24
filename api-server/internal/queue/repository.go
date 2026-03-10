@@ -23,7 +23,10 @@ func NewWaitingQueueRepository(ctx context.Context) *WaitingQueueRepository {
 	})
 	if err := client.Ping(ctx).Err(); err != nil {
 		slog.Error("Redis 연결 실패", "error", err)
-	}
+		panic(err)
+	} 
+
+	slog.Info("Redis 연결 성공")
 
 	wqRepo := &WaitingQueueRepository{
 		client:    client,
@@ -35,6 +38,7 @@ func NewWaitingQueueRepository(ctx context.Context) *WaitingQueueRepository {
 	err := wqRepo.InitSnapshot(ctx)
 	if err != nil {
 		slog.Error("InitSnapshot failed", "error", err)
+		panic(err)
 	}
 
 	return wqRepo
@@ -48,6 +52,7 @@ func (r *WaitingQueueRepository) InitSnapshot(ctx context.Context) error {
 	for _, event := range events {
 		r.Snapshots.Store(event.Name, NewWaitingQueueSnapshot())
 	}
+	slog.Info("Snapshots initialized", "count", len(events))
 	return nil
 }
 
@@ -126,7 +131,11 @@ func (r *WaitingQueueRepository) dequeue(ctx context.Context, event_id string) (
 		return -1, ErrQueueEmpty
 	}
 
-	return results[0].Member.(int64), nil
+	user_id, err = strconv.ParseInt(results[0].Member.(string), 10, 64)
+	if err != nil {
+		return -1, err
+	}
+	return user_id, nil
 }
 
 func (r *WaitingQueueRepository) getRank(ctx context.Context, event_id string, user_id int64) (rank int64, err error) {
