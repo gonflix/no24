@@ -88,6 +88,8 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 		return err
 	}
 
+	slog.Debug("sseHandler start", "user_id", userID, "event_id", eventID)	
+
 	// SSE 채널 등록
 	hubkey := hubKey{user_id: userID, event_id: eventID}
 	jwtChan := make(chan string)

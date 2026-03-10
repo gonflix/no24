@@ -73,6 +73,8 @@ func (r *WaitingQueueRepository) Add(ctx context.Context, event_id string, user_
 		return -1, err
 	}
 
+	slog.Info("user enqueued", "event_id", event_id, "user_id", user_id, "rank", rank)
+
 	ss.Add(user_id, rank, score)
 
 	return rank, nil
@@ -161,6 +163,11 @@ func (r *WaitingQueueRepository) UpdateSnapshot(ctx context.Context, event_id st
 			Rank:  int64(i + 1),
 			Score: z.Score,
 		}
+	}
+
+	if len(vals) == 0 {
+		slog.Debug("snapshot empty", "event_id", event_id)
+		return nil
 	}
 
 	// 원자적으로 스냅샷 교체
