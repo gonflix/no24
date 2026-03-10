@@ -166,7 +166,7 @@ func (r *WaitingQueueRepository) UpdateSnapshot(ctx context.Context, event_id st
 	}
 
 	if len(vals) == 0 {
-		slog.Debug("snapshot empty", "event_id", event_id)
+		slog.Info("snapshot empty", "event_id", event_id)
 		return nil
 	}
 
