@@ -107,11 +107,25 @@ func (r *WaitingQueueRepository) Get(ctx context.Context, event_id string, user_
 
 func (r *WaitingQueueRepository) enqueue(ctx context.Context, event_id string, user_id int64) (score float64, err error) {
 	score = float64(time.Now().UnixNano())
+	key := buildKey(event_id)
+	member := strconv.FormatInt(user_id, 10)
+	slog.Info("redis enqueue start", "key", key, "event_id", event_id, "user_id", user_id, "member", member, "score", score)
 
-	err = r.client.ZAdd(ctx, buildKey(event_id), redis.Z{
+	err = r.client.ZAdd(ctx, key, redis.Z{
 		Score:  score,
-		Member: strconv.FormatInt(user_id, 10),
+		Member: member,
 	}).Err()
+	if err != nil {
+		slog.Error("redis enqueue failed", "key", key, "event_id", event_id, "user_id", user_id, "error", err)
+		return score, err
+	}
+
+	size, sizeErr := r.client.ZCard(ctx, key).Result()
+	if sizeErr != nil {
+		slog.Error("redis enqueue zcard failed", "key", key, "event_id", event_id, "user_id", user_id, "error", sizeErr)
+	} else {
+		slog.Info("redis enqueue done", "key", key, "event_id", event_id, "user_id", user_id, "zcard", size)
+	}
 	return score, err
 }
 
