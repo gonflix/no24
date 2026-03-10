@@ -1,0 +1,15 @@
+# Stage 1: Build
+FROM gradle:8-jdk21 AS builder
+WORKDIR /app
+COPY ticketing/ .
+# 테스트 제외하고 빌드
+RUN gradle clean build -x test
+
+# Stage 2: Final Image
+# jdk 없이 jre만 있음
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+# 빌드 결과물인 jar 파일만 복사 (파일명은 프로젝트 설정에 따라 다름)
+COPY --from=builder /app/build/libs/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
