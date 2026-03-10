@@ -88,7 +88,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 		return err
 	}
 
-	slog.Debug("sseHandler start", "user_id", userID, "event_id", eventID)	
+	slog.Info("sseHandler start", "user_id", userID, "event_id", eventID)	
 
 	// SSE 채널 등록
 	hubkey := hubKey{user_id: userID, event_id: eventID}
@@ -137,7 +137,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 				slog.Error("sse flush error", "error", err, "user_id", userID)
 				continue
 			}
-			slog.Debug("sse write token", "user_id", userID, "token", token)
+			slog.Info("sse write token", "user_id", userID, "token", token)
 
 		case <-ticker.C: // 주기적으로 순서 알림
 			rank, err := wqRepository.Get(c.Request().Context(), eventID, userID)
@@ -154,7 +154,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 				slog.Error("sse flush error", "error", err, "user_id", userID)
 				continue
 			}
-			slog.Debug("sse write resp", "user_id", userID, "rank", rank)
+			slog.Info("sse write resp", "user_id", userID, "rank", rank)
 		}
 	}
 }
