@@ -40,7 +40,7 @@ func NewHub() *Hub {
 	}
 }
 
-func (h *Hub) SendToken(ctx context.Context, user_id int64, event_id string, token string) (exist bool){
+func (h *Hub) SendToken(ctx context.Context, user_id int64, event_id string, token string) (exist bool) {
 	key := hubKey{user_id: user_id, event_id: event_id}
 
 	client, ok := h.channels[key]
@@ -48,7 +48,7 @@ func (h *Hub) SendToken(ctx context.Context, user_id int64, event_id string, tok
 		slog.Error("sse client not found", "user_id", user_id, "event_id", event_id)
 		return false
 	}
-	
+
 	client <- token
 	return true
 }
@@ -90,7 +90,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 		return err
 	}
 
-	slog.Info("sseHandler start", "user_id", userID, "event_id", eventID)	
+	slog.Info("sseHandler start", "user_id", userID, "event_id", eventID)
 
 	// SSE 채널 등록
 	hubkey := hubKey{user_id: userID, event_id: eventID}
@@ -106,7 +106,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 	c.Response().Header().Set("Connection", "keep-alive")
 
 	// You may need this locally for CORS requests
-	// w.Header().Set("Access-Control-Allow-Origin", "*")
+	c.Response().Header().Set("Access-Control-Allow-Origin", "*")
 
 	rc := http.NewResponseController(c.Response())
 
