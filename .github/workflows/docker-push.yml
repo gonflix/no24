@@ -23,8 +23,15 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set build flags
+        id: flags
+        run: |
+          echo "build_api=${{ contains(github.event.head_commit.message, '[build-api]') }}" >> "$GITHUB_OUTPUT"
+          echo "build_tkt=${{ contains(github.event.head_commit.message, '[build-tkt]') }}" >> "$GITHUB_OUTPUT"
+
       # 1. Go 서버 빌드 및 푸시 (no24-api).
       - name: Build and push Go API
+        if: steps.flags.outputs.build_api == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./api-server # Go 프로젝트 폴더 경로
@@ -36,6 +43,7 @@ jobs:
 
       # 2. Java 서버 빌드 및 푸시 (no24-svc)
       - name: Build and push Java SVC
+        if: steps.flags.outputs.build_tkt == 'true'
         # 해킹으로 인한 토큰 탈취 방지위해 버전 고정
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 
         with:
@@ -46,16 +54,29 @@ jobs:
             gonflix/no24-svc:latest
             gonflix/no24-svc:${{ github.sha }}
 
-      - name: Update Kubernetes resources
+      - name: Update api-server deployment tag
+        if: steps.flags.outputs.build_api == 'true'
         run: |
-          # 예: ArgoCD를 위한 deployment.yaml의 태그 변경
           cd infra
           sed -i "s|gonflix/no24-api:.*|gonflix/no24-api:${{ github.sha }}|g" api-server/deployment.yaml
+
+      - name: Update ticketing-server deployment tag
+        if: steps.flags.outputs.build_tkt == 'true'
+        run: |
+          cd infra
           sed -i "s|gonflix/no24-svc:.*|gonflix/no24-svc:${{ github.sha }}|g" ticketing-server/deployment.yaml
-          
+
+      - name: Commit and push updated deployment tags
+        if: steps.flags.outputs.build_api == 'true' || steps.flags.outputs.build_tkt == 'true'
+        run: |
+          cd infra
           # 변경사항을 Git에 커밋하고 푸시
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
           git config --global user.name "${{ github.actor }}"
-          git add .
-          git commit -m "chore: update image tag to ${{ github.sha }}"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "chore: update image tag to ${{ github.sha }}"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          else
+            echo "No deployment changes to commit."
+          fi
