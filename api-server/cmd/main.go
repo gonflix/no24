@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gonflix/no24/api-server/internal/mq"
 	"github.com/gonflix/no24/api-server/internal/queue"
 	svc "github.com/gonflix/no24/api-server/internal/service"
 	"github.com/gonflix/no24/api-server/internal/sse"
@@ -53,6 +54,13 @@ func main() {
 	mainCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	// MQ Client
+	if err := mq.InitMQClient(); err != nil {
+		slog.Error("Failed to initialize MQ Client", "error", err)
+		return
+	}
+	defer mq.CloseMQClient()
+
 	// WaitingQueue Repository
 	wqRepository := queue.NewWaitingQueueRepository(mainCtx)
 	defer wqRepository.Close()
@@ -76,6 +84,9 @@ func main() {
 	})
 	mainWG.Go(func() { // WaitingQueue Worker
 		svc.RunWaitingQueueWorkerAll(mainCtx, wqRepository, sseHub)
+	})
+	mainWG.Go(func() { // Kafka Consumer
+		mq.RunConsumer(mainCtx, sseHub)
 	})
 
 	sc := echo.StartConfig{Address: ":8080"}

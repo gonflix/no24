@@ -40,15 +40,17 @@ func NewHub() *Hub {
 	}
 }
 
-func (h *Hub) SendToken(ctx context.Context, user_id int64, event_id string, token string) {
+func (h *Hub) SendToken(ctx context.Context, user_id int64, event_id string, token string) (exist bool){
 	key := hubKey{user_id: user_id, event_id: event_id}
 
 	client, ok := h.channels[key]
 	if !ok {
 		slog.Error("sse client not found", "user_id", user_id, "event_id", event_id)
-		return
+		return false
 	}
+	
 	client <- token
+	return true
 }
 
 func (h *Hub) Run(ctx context.Context) {

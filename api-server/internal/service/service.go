@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gonflix/no24/api-server/internal/mq"
 	"github.com/gonflix/no24/api-server/internal/queue"
 	"github.com/gonflix/no24/api-server/internal/sse"
 )
@@ -77,9 +78,14 @@ func waitingQueueWorker(ctx context.Context, event_id string, wqRepository *queu
 			slog.Info("waitingQueueWorker pop user", "event_id", event_id, "user_id", user_id, "token", token)
 
 			// SSE로 토큰 전달
-			sseHub.SendToken(ctx, user_id, event_id, token)
-			//
-
+			exist := sseHub.SendToken(ctx, user_id, event_id, token)
+			if !exist {
+				slog.Info("token not sent", "event_id", event_id, "user_id", user_id)
+				// 토큰을 전달할 클라이언트가 없는 경우, Broadcast로 모든 클라이언트에게 토큰 전달
+				if err := mq.BroadcastToken(ctx, user_id, event_id, token); err != nil {
+					slog.Error("error sending user event to API", "error", err, "event_id", event_id, "user_id", user_id)
+				}
+			}
 			// 그 결과 브라우저는 SSE 종료, 토큰들고 java  예매페이지로 리다이렉트
 		}
 	}
