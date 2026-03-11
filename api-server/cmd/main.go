@@ -85,5 +85,5 @@ func main() {
 
 	mainWG.Wait()
 
-	slog.Info("main done")
+	slog.Info("API Server Shutdown...")
 }

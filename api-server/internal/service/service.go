@@ -25,13 +25,10 @@ func createJWT(user_id int64, event_id string) (string, error) {
 }
 
 func RunWaitingQueueWorkerAll(ctx context.Context, wqRepository *queue.WaitingQueueRepository, sseHub *sse.Hub) {
-	slog.Info("RunWaitingQueueWorkerAll")
 	var wg sync.WaitGroup
 
 	wqRepository.Snapshots.Range(func(event_id string, snapshot *queue.WaitingQueueSnapshot) bool {
 		wg.Go(func() {
-			slog.Info("waitingQueueWorker 전")
-
 			waitingQueueWorker(ctx, event_id, wqRepository, sseHub)
 		})
 		return true
@@ -59,27 +56,29 @@ func waitingQueueWorker(ctx context.Context, event_id string, wqRepository *queu
 				slog.Error("error update snapshot", "error", err, "event_id", event_id)
 			}
 
-		// default:
+		default:
 			// 0순위 유저를 제거하고 토큰 발급
-			// user_id, err := wqRepository.Pop(ctx, event_id)
-			// if err != nil {
-			// 	if err == queue.ErrQueueEmpty {
-			// 		time.Sleep(1 * time.Second)
-			// 		continue
-			// 	}
+			slog.Info("waitingQueueWorker trying pop!", "event_id", event_id)
+			user_id, err := wqRepository.Pop(ctx, event_id)
+			if err != nil {
+				if err == queue.ErrQueueEmpty {
+					time.Sleep(1 * time.Second)
+					continue
+				}
 
-			// 	slog.Error("error pop from waiting room", "error", err, "event_id", event_id)
-			// 	continue
-			// }
-			// token, err := createJWT(user_id, event_id)
-			// if err != nil {
-			// 	continue
-			// }
+				slog.Error("error pop from waiting room", "error", err, "event_id", event_id)
+				continue
+			}
+			token, err := createJWT(user_id, event_id)
+			if err != nil {
+				slog.Error("error creating JWT", "error", err, "event_id", event_id, "user_id", user_id)
+				continue
+			}
 
-			// slog.Info("waitingQueueWorker pop user", "event_id", event_id, "user_id", user_id, "token", token)
+			slog.Info("waitingQueueWorker pop user", "event_id", event_id, "user_id", user_id, "token", token)
 
-			// // SSE로 토큰 전달
-			// sseHub.SendToken(ctx, user_id, event_id, token)
+			// SSE로 토큰 전달
+			sseHub.SendToken(ctx, user_id, event_id, token)
 
 			// 그 결과 브라우저는 SSE 종료, 토큰들고 java  예매페이지로 리다이렉트
 		}

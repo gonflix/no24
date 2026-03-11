@@ -26,7 +26,7 @@ func NewWaitingQueueRepository(ctx context.Context) *WaitingQueueRepository {
 		panic(err)
 	} 
 
-	slog.Info("Redis 연결 성공")
+	slog.Info("Redis connected", "addr", "redis-service:6379")
 
 	wqRepo := &WaitingQueueRepository{
 		client:    client,
@@ -149,6 +149,8 @@ func (r *WaitingQueueRepository) dequeue(ctx context.Context, event_id string) (
 		return -1, err
 	}
 
+	slog.Info("redis dequeue", "event_id", event_id, "results", results)	
+
 	if len(results) == 0 {
 		return -1, ErrQueueEmpty
 	}
@@ -166,7 +168,7 @@ func (r *WaitingQueueRepository) getRank(ctx context.Context, event_id string, u
 	if err != nil {
 		return -1, err
 	}
-	return rank, nil
+	return rank+1, nil
 }
 
 // N분마다 반복?
@@ -180,7 +182,12 @@ func (r *WaitingQueueRepository) UpdateSnapshot(ctx context.Context, event_id st
 	}
 	newData := make(map[int64]WaitingMember, len(vals))
 	for i, z := range vals {
-		newData[z.Member.(int64)] = WaitingMember{
+		user_id, err := strconv.ParseInt(z.Member.(string), 10, 64)
+		if err != nil {
+			slog.Error("error parsing user_id", "member", z.Member, "error", err, "event_id", event_id)
+			continue
+		}
+		newData[user_id] = WaitingMember{
 			Rank:  int64(i + 1),
 			Score: z.Score,
 		}
