@@ -88,6 +88,7 @@ func (r *WaitingQueueRepository) Add(ctx context.Context, event_id string, user_
 func (r *WaitingQueueRepository) Get(ctx context.Context, event_id string, user_id int64) (rank int64, err error) {
 	ss, ok := r.Snapshots.Load(event_id)
 	if !ok {
+		slog.Error("snapshot not found", "event_id", event_id)
 		return -1, ErrQueueEmpty //?
 	}
 
