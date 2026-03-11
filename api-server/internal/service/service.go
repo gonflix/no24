@@ -79,6 +79,7 @@ func waitingQueueWorker(ctx context.Context, event_id string, wqRepository *queu
 
 			// SSE로 토큰 전달
 			sseHub.SendToken(ctx, user_id, event_id, token)
+			//
 
 			// 그 결과 브라우저는 SSE 종료, 토큰들고 java  예매페이지로 리다이렉트
 		}
