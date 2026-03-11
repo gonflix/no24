@@ -3,6 +3,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch API Server",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/api-server/cmd",
+        },
+        {
             "type": "java",
             "request": "launch",
             "name": "Launch TicketingApplication",

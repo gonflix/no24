@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gonflix/no24/api-server/internal/queue"
 	"github.com/gonflix/no24/api-server/internal/sse"
 )
@@ -21,7 +21,7 @@ func createJWT(user_id int64, event_id string) (string, error) {
 		"event_id": event_id,
 		"exp":      time.Now().Add(TOKEN_DURATION).Unix(),
 	})
-	return token.SignedString(mySigningKey)
+	return token.SignedString([]byte(mySigningKey))
 }
 
 func RunWaitingQueueWorkerAll(ctx context.Context, wqRepository *queue.WaitingQueueRepository, sseHub *sse.Hub) {

@@ -63,11 +63,6 @@ func (r *WaitingQueueRepository) Add(ctx context.Context, event_id string, user_
 	if !ok {
 		return -1, ErrQueueEmpty
 	}
-
-
-	keys, err := r.client.Keys(ctx, "*").Result()
-	slog.Info("redis keys", "keys", keys)
-
 	
 	score, err := r.enqueue(ctx, event_id, user_id)
 	if err != nil {
