@@ -110,7 +110,7 @@ func (r *WaitingQueueRepository) enqueue(ctx context.Context, event_id string, u
 	score = float64(time.Now().UnixNano())
 	key := buildKey(event_id)
 	member := strconv.FormatInt(user_id, 10)
-	slog.Info("redis enqueue start", "key", key, "event_id", event_id, "user_id", user_id, "member", member, "score", score)
+	// slog.Info("redis enqueue start", "key", key, "event_id", event_id, "user_id", user_id, "member", member, "score", score)
 
 	err = r.client.ZAdd(ctx, key, redis.Z{
 		Score:  score,
@@ -120,13 +120,12 @@ func (r *WaitingQueueRepository) enqueue(ctx context.Context, event_id string, u
 		slog.Error("redis enqueue failed", "key", key, "event_id", event_id, "user_id", user_id, "error", err)
 		return score, err
 	}
-
-	size, sizeErr := r.client.ZCard(ctx, key).Result()
-	if sizeErr != nil {
-		slog.Error("redis enqueue zcard failed", "key", key, "event_id", event_id, "user_id", user_id, "error", sizeErr)
-	} else {
-		slog.Info("redis enqueue done", "key", key, "event_id", event_id, "user_id", user_id, "zcard", size)
-	}
+	// size, sizeErr := r.client.ZCard(ctx, key).Result()
+	// if sizeErr != nil {
+	// 	slog.Error("redis enqueue zcard failed", "key", key, "event_id", event_id, "user_id", user_id, "error", sizeErr)
+	// } else {
+	// 	slog.Info("redis enqueue done", "key", key, "event_id", event_id, "user_id", user_id, "zcard", size)
+	// }
 	return score, err
 }
 
@@ -148,8 +147,6 @@ func (r *WaitingQueueRepository) dequeue(ctx context.Context, event_id string) (
 	if err != nil {
 		return -1, err
 	}
-
-	slog.Info("redis dequeue", "event_id", event_id, "results", results)	
 
 	if len(results) == 0 {
 		return -1, ErrQueueEmpty

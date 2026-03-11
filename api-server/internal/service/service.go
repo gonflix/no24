@@ -16,7 +16,7 @@ const TOKEN_DURATION = 10 * time.Minute
 const mySigningKey = "71c150277be553d6c584b7a7bc403bfa9a01935c49a0cb8e872516f712086291"
 
 func createJWT(user_id int64, event_id string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":  user_id,
 		"event_id": event_id,
 		"exp":      time.Now().Add(TOKEN_DURATION).Unix(),
@@ -58,7 +58,6 @@ func waitingQueueWorker(ctx context.Context, event_id string, wqRepository *queu
 
 		default:
 			// 0순위 유저를 제거하고 토큰 발급
-			slog.Info("waitingQueueWorker trying pop!", "event_id", event_id)
 			user_id, err := wqRepository.Pop(ctx, event_id)
 			if err != nil {
 				if err == queue.ErrQueueEmpty {
