@@ -53,6 +53,8 @@ func init() {
 func main() {
 	mainCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	var SECRET_KEY string
+	SECRET_KEY = "MYKEY"
 
 	// MQ Client
 	if err := mq.InitMQClient(); err != nil {
