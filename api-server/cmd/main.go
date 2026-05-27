@@ -55,6 +55,7 @@ func main() {
 	defer cancel()
 	var SECRET_KEY string
 	SECRET_KEY = "MYKEY"
+	slog.Debug("SECRET_KEY initialized", "value", SECRET_KEY)
 
 	// MQ Client
 	if err := mq.InitMQClient(); err != nil {
