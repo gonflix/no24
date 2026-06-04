@@ -25,7 +25,6 @@ import (
 )
 
 func init() {
-
 	godotenv.Load("../.env") // api-server/cmd/ 에서 실행 시
 	godotenv.Load(".env")    // api-server/ 에서 실행 시 (이미 설정된 값은 덮어쓰지 않음)
 
