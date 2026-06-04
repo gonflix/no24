@@ -5,17 +5,19 @@ spring:
   application:
     name: ticketing
   kafka:
-    bootstrap-servers: localhost:9092
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    bootstrap-servers: localhost:9092 # Kafka broker address 
+    # producer:
+      # key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # retries: 0
+      # batch-size: 16384
     consumer:
-      group-id: ticketing-payment
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: com.ticketing.ticketing.kafka
+      group-id: ticketing-group
+      # auto-offset-reset: earliest  # What to do when no initial offset is found
+      # key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      # properties:
+      #   spring.json.trusted.packages: com.ticketing.ticketing.kafka
   data:
     redis:
       host: redis-service
@@ -24,7 +26,8 @@ spring:
 
 app:
   jwt:
-    secret: "71c150277be553d6c584b7a7bc403bfa9a01935c49a0cb8e872516f712086291"
+    issuer: "no24-api-server"
+    audience: "no24-tkt-server"
     expiration-seconds: 3600
   kafka:
-    payment-topic: payment.requested.v1
+    payment-topic: ticketing.payment.requested

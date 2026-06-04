@@ -35,3 +35,44 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Environment & Secrets ###
+.env
+.env.local
+.env.*.local
+application.yml
+application-local.yml
+application-secret.yml
+application-prod.yml
+
+### Logs ###
+*.log
+logs/
+log/
+
+### JVM ###
+hs_err_pid*
+replay_pid*
+
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+
+### Windows ###
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+### Linux ###
+*~
+
+### Gradle cache ###
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+
+### Test output ###
+test-results/
+jacoco/
+*.exec

@@ -1,1 +1,5 @@
 계정.md
+
+*/.env
+*/.env.local
+*/.env.*.local

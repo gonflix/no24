@@ -134,7 +134,7 @@
       <h2>Load Options</h2>
       <div class="grid grid-2">
         <label>Total Users
-          <input id="totalUsers" type="number" value="100" min="1" />
+          <input id="totalUsers" type="number" value="1" min="1" />
         </label>
         <label>Concurrency
           <input id="concurrency" type="number" value="20" min="1" />
@@ -340,7 +340,7 @@
           cfg.queueTimeoutSec
         );
 
-        const reserveUrl = toUrl(cfg.ticketingBaseUrl, "/api/seats/reserve");
+        const reserveUrl = toUrl(cfg.ticketingBaseUrl, "/seats/reserve");
         const reserve = await postJson(reserveUrl, { seatId }, {
           Authorization: `Bearer ${queueResult.jwt}`
         });
