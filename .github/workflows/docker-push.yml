@@ -29,6 +29,16 @@ jobs:
           echo "build_api=${{ contains(github.event.head_commit.message, '[build-api]') }}" >> "$GITHUB_OUTPUT"
           echo "build_tkt=${{ contains(github.event.head_commit.message, '[build-tkt]') }}" >> "$GITHUB_OUTPUT"
 
+      
+      - name: Create .env file
+        if: steps.flags.outputs.build_api == 'true'
+        run: echo "${{ secrets.ENV_FILE_API_SERVER }}" > ./api-server/.env
+        # 큰따옴표 필수! 없으면 줄바꿈 무조건 깨짐
+      - name: Check .env
+        if: steps.flags.outputs.build_api == 'true'
+        run: cat .env 
+
+
       # 1. Go 서버 빌드 및 푸시 (no24-api).
       - name: Build and push Go API
         if: steps.flags.outputs.build_api == 'true'
