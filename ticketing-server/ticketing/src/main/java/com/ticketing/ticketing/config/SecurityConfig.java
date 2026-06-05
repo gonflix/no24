@@ -75,7 +75,7 @@ public class SecurityConfig {
     public JwtDecoder jwtDecoder() {
         // aud 검증을 JwtDecoder 레벨에서 추가
         NimbusJwtDecoder decoder = NimbusJwtDecoder
-                .withJwkSetUri("http://auth-server:8080/.well-known/jwks.json")
+                .withJwkSetUri("http://api-server-service:8080/.well-known/jwks.json")
                 .jwsAlgorithm(SignatureAlgorithm.RS256)
                 // .cache(caffeineCache()) // 캐시 직접 주입
                 .build();
