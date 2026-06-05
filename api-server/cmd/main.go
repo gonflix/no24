@@ -28,6 +28,7 @@ func init() {
 	godotenv.Load("../.env") // api-server/cmd/ 에서 실행 시
 	godotenv.Load(".env")    // api-server/ 에서 실행 시 (이미 설정된 값은 덮어쓰지 않음)
 
+	//
 	// 1. Handler 옵션 설정
 	opts := &slog.HandlerOptions{
 		AddSource: true, // 이 옵션이 caller(파일 및 라인) 정보를 추가합니다.
