@@ -23,6 +23,9 @@ spec:
         image: docker.io/gonflix/no24-api:07fb293b358700d3fa1522b9f54064fd870480d8
         ports:
         - containerPort: 8080 # Go 앱이 리스닝하는 포트
+        envFrom:
+        - configMapRef:
+            name: api-sv-config
         resources:
           requests:
             cpu: "100m"
