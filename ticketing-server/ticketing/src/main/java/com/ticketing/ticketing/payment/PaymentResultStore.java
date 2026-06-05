@@ -1,15 +1,17 @@
 package com.ticketing.ticketing.payment;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Duration;
+import java.util.Optional;
+
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
-import java.util.Optional;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -29,7 +31,8 @@ public class PaymentResultStore {
             bucket.set(json, TTL);
             log.info("Saved payment result. reservationId={}, success={}", result.reservationId(), result.success());
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize payment result. reservationId=" + result.reservationId(), e);
+            throw new RuntimeException("Failed to serialize payment result. reservationId=" + result.reservationId(),
+                    e);
         }
     }
 
