@@ -37,7 +37,6 @@ jobs:
           context: ./api-server # Go 프로젝트 폴더 경로
           file: ./api-server/no24_api_Dockerfile
           push: true
-          provenance: false
           tags: |
             gonflix/no24-api:latest
             gonflix/no24-api:${{ github.sha }}
@@ -51,7 +50,6 @@ jobs:
           context: ./ticketing-server # Java 프로젝트 폴더 경로
           file: ./ticketing-server/no24_svc_Dockerfile
           push: true
-          provenance: false
           tags: |
             gonflix/no24-svc:latest
             gonflix/no24-svc:${{ github.sha }}
