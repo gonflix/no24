@@ -41,6 +41,7 @@ func InitService(runEnv types.RunEnv, tIssuer, tAudience, tKeyID string) {
 	if runEnv == "" || tIssuer == "" || tAudience == "" || tKeyID == "" {
 		log.Panicf("필수 환경 변수가 설정되지 않았습니다 RUN_ENV %s, TOKEN_ISSUER %s, TOKEN_AUDIENCE %s, TOKEN_KEY_ID %s", runEnv, tIssuer, tAudience, tKeyID)
 	}
+	slog.Info("환경변수 RUN_ENV %s, TOKEN_ISSUER %s, TOKEN_AUDIENCE %s, TOKEN_KEY_ID %s", string(runEnv), tIssuer, tAudience, tKeyID)
 
 	getPrivateKey, err := getPrivateKey(runEnv)
 	if err != nil {
