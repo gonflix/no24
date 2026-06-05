@@ -7,8 +7,8 @@ import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +30,8 @@ public class PaymentResultStore {
             RBucket<String> bucket = redissonClient.getBucket(KEY_PREFIX + result.reservationId());
             bucket.set(json, TTL);
             log.info("Saved payment result. reservationId={}, success={}", result.reservationId(), result.success());
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize payment result. reservationId=" + result.reservationId(),
-                    e);
+        } catch (JacksonException e) {
+            throw new RuntimeException("Failed to serialize payment result. reservationId=" + result.reservationId(), e);
         }
     }
 
@@ -44,7 +43,7 @@ public class PaymentResultStore {
         }
         try {
             return Optional.of(objectMapper.readValue(json, PaymentResultEvent.class));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("Failed to deserialize payment result. reservationId={}", reservationId, e);
             return Optional.empty();
         }
