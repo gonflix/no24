@@ -165,7 +165,7 @@
       <div class="metric">
         <div>JWT 획득<div id="jwtOk" class="value ok">0</div></div>
         <div>좌석 성공<div id="reserveOk" class="value ok">0</div></div>
-        <div>결제요청 성공<div id="paymentOk" class="value ok">0</div></div>
+        <div>결제 완료<div id="paymentOk" class="value ok">0</div></div>
         <div>실패<div id="totalFail" class="value bad">0</div></div>
       </div>
       <div class="metric" style="margin-top: 8px;">
@@ -247,6 +247,31 @@
         elapsed: Math.round(performance.now() - start),
         body
       };
+    }
+
+    // 결제 결과 폴링 — 3초 간격, 30초 타임아웃
+    async function pollPaymentStatus(reservationId, jwt, ticketingBaseUrl) {
+      const POLL_INTERVAL_MS = 3000;
+      const POLL_TIMEOUT_MS = 30000;
+      const statusUrl = toUrl(ticketingBaseUrl, `api/payments/status/${reservationId}`);
+      const pollStart = performance.now();
+
+      while (performance.now() - pollStart < POLL_TIMEOUT_MS) {
+        await sleep(POLL_INTERVAL_MS);
+        let response;
+        try {
+          response = await fetch(statusUrl, { headers: { Authorization: `Bearer ${jwt}` } });
+        } catch (_) {
+          continue;
+        }
+        if (response.status === 200) {
+          let body = null;
+          try { body = await response.json(); } catch (_) {}
+          return { timedOut: false, body };
+        }
+        // 202 = 처리 중, 계속 폴링
+      }
+      return { timedOut: true, body: null };
     }
 
     function parseJwtFromSseData(rawData) {
@@ -340,7 +365,7 @@
           cfg.queueTimeoutSec
         );
 
-        const reserveUrl = toUrl(cfg.ticketingBaseUrl, "/seats/reserve");
+        const reserveUrl = toUrl(cfg.ticketingBaseUrl, "api/seats/reserve");
         const reserve = await postJson(reserveUrl, { seatId }, {
           Authorization: `Bearer ${queueResult.jwt}`
         });
@@ -373,7 +398,8 @@
         const waitSec = randomInt(cfg.waitMinSec, cfg.waitMaxSec);
         await sleep(waitSec * 1000);
 
-        const paymentUrl = toUrl(cfg.ticketingBaseUrl, "/api/payments/request");
+        const paymentUrl = toUrl(cfg.ticketingBaseUrl, "api/payments/request");
+        const paymentStart = performance.now();
         const payment = await postJson(paymentUrl, {
           reservationId,
           amount: cfg.paymentAmount
@@ -381,15 +407,44 @@
           Authorization: `Bearer ${queueResult.jwt}`
         });
 
-        if (!payment.ok) {
+        // 202 Accepted = 정상 접수, 그 외 오류
+        if (payment.status !== 202) {
           return {
             ok: false,
             stage: "payment",
             queueElapsed: queueResult.queueElapsed,
             reserveElapsed: reserve.elapsed,
-            paymentElapsed: payment.elapsed,
+            paymentElapsed: Math.round(performance.now() - paymentStart),
             totalElapsed: Math.round(performance.now() - totalStart),
-            message: `payment failed status=${payment.status}`
+            message: `payment request failed status=${payment.status}`
+          };
+        }
+
+        // 3초 간격 폴링, 30초 타임아웃
+        const pollResult = await pollPaymentStatus(reservationId, queueResult.jwt, cfg.ticketingBaseUrl);
+        const paymentElapsed = Math.round(performance.now() - paymentStart);
+
+        if (pollResult.timedOut) {
+          return {
+            ok: false,
+            stage: "payment_timeout",
+            queueElapsed: queueResult.queueElapsed,
+            reserveElapsed: reserve.elapsed,
+            paymentElapsed,
+            totalElapsed: Math.round(performance.now() - totalStart),
+            message: "payment polling timed out after 30s"
+          };
+        }
+
+        if (!pollResult.body?.success) {
+          return {
+            ok: false,
+            stage: "payment_failed",
+            queueElapsed: queueResult.queueElapsed,
+            reserveElapsed: reserve.elapsed,
+            paymentElapsed,
+            totalElapsed: Math.round(performance.now() - totalStart),
+            message: pollResult.body?.message || "payment failed"
           };
         }
 
@@ -398,7 +453,7 @@
           stage: "done",
           queueElapsed: queueResult.queueElapsed,
           reserveElapsed: reserve.elapsed,
-          paymentElapsed: payment.elapsed,
+          paymentElapsed,
           totalElapsed: Math.round(performance.now() - totalStart)
         };
       } catch (error) {

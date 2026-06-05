@@ -11,14 +11,12 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type mQClient struct {
+const KAFKA_TOPIC = "wait-queue-events" // 대기열 0순위 유저 변경을 전체 api-server에 알림
+
+var (
 	writer *kafka.Writer
 	reader *kafka.Reader
-}
-
-var client *mQClient
-
-const KAFKA_TOPIC = "wait-queue-events"
+)
 
 func InitMQClient() error {
 	hostname, err := os.Hostname()
@@ -26,33 +24,32 @@ func InitMQClient() error {
 		return fmt.Errorf("failed to get hostname: %w", err)
 	}
 
-	client = &mQClient{
-		writer: &kafka.Writer{
-			Addr:     kafka.TCP("kafka-service:9092"),
-			Topic:    KAFKA_TOPIC,
-			Balancer: &kafka.LeastBytes{},
-		},
-		reader: kafka.NewReader(kafka.ReaderConfig{
-			Brokers:  []string{"kafka-service:9092"},
-			Topic:    KAFKA_TOPIC,
-			GroupID:  hostname, // 모든 서버가 다른 ID를 가져야 전원 수신 가능
-			MinBytes: 10e3,     // 10KB
-			MaxBytes: 10e6,     // 10MB
-		}),
+	writer = &kafka.Writer{
+		Addr:     kafka.TCP("kafka-service:9092"),
+		Topic:    KAFKA_TOPIC,
+		Balancer: &kafka.LeastBytes{},
 	}
+	reader = kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  []string{"kafka-service:9092"},
+		Topic:    KAFKA_TOPIC,
+		GroupID:  hostname, // 모든 서버가 다른 ID를 가져야 전원 수신 가능
+		MinBytes: 10e3,     // 10KB
+		MaxBytes: 10e6,     // 10MB
+	})
 
 	return nil
 }
 
 func CloseMQClient() {
-	if err := client.writer.Close(); err != nil {
+	if err := writer.Close(); err != nil {
 		slog.Error("Failed to close MQ writer", "error", err)
 	}
-	if err := client.reader.Close(); err != nil {
+	if err := reader.Close(); err != nil {
 		slog.Error("Failed to close MQ reader", "error", err)
 	}
 }
 
+// key: user_id:event_id, value: token
 func buildKey(user_id int64, event_id string) string {
 	return fmt.Sprintf("%d:%s", user_id, event_id)
 }
@@ -67,7 +64,7 @@ func parseKey(key string) (user_id int64, event_id string, err error) {
 
 // Producer
 func Write(ctx context.Context, key string, val string) error {
-	return client.writer.WriteMessages(ctx,
+	return writer.WriteMessages(ctx,
 		kafka.Message{
 			Key:   []byte(key),
 			Value: []byte(val),
@@ -87,12 +84,14 @@ func RunConsumer(ctx context.Context, sseHub *sse.Hub) {
 			return
 
 		default:
-			msg, err := client.reader.ReadMessage(ctx)
+			msg, err := reader.ReadMessage(ctx)
 			if err != nil {
 				log.Printf("error while reading message: %v", err)
 				break
 			}
 
+			// 다른 api-server에서 브로드캐스트된 토큰을 SSE Hub로 전달
+			// 유저가 토큰을 전달받고 SSE 연결을 끊음
 			user_id, event_id, err := parseKey(string(msg.Key))
 			if err != nil {
 				slog.Error("failed to parse key", "error", err, "key", msg.Key)

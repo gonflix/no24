@@ -7,18 +7,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.ticketing.ticketing.dto.ApiResponse;
 import com.ticketing.ticketing.dto.PaymentRequest;
 import com.ticketing.ticketing.dto.SeatReservationRequest;
 import com.ticketing.ticketing.kafka.PaymentRequestedEvent;
-import com.ticketing.ticketing.notification.PushNotificationService;
 import com.ticketing.ticketing.payment.PaymentProducer;
+import com.ticketing.ticketing.payment.PaymentResultEvent;
+import com.ticketing.ticketing.payment.PaymentResultStore;
 import com.ticketing.ticketing.seat.SeatReservation;
 import com.ticketing.ticketing.seat.SeatReservationService;
 
@@ -34,9 +35,8 @@ public class TicketingController {
 
     private final SeatReservationService seatReservationService;
     private final PaymentProducer paymentProducer;
-    private final PushNotificationService pushNotificationService;
+    private final PaymentResultStore paymentResultStore;
 
-    // 좌석 예약 API
     @PostMapping("/seats/reserve")
     public ResponseEntity<ApiResponse> reserve(@Valid @RequestBody SeatReservationRequest request,
             Authentication authentication) {
@@ -53,7 +53,6 @@ public class TicketingController {
                 "seatId", reservation.seatId())));
     }
 
-    // 결제 API(좌석 예약 성공)
     @PostMapping("/payments/request")
     public ResponseEntity<ApiResponse> requestPayment(@Valid @RequestBody PaymentRequest request,
             Authentication authentication) {
@@ -70,18 +69,35 @@ public class TicketingController {
         try {
             paymentProducer.send(new PaymentRequestedEvent(request.reservationId(), userId, request.amount()));
         } catch (IllegalStateException e) {
-            log.error("requestPayment: failed to publish payment request for reservationId={}", request.reservationId(),
-                    e);
+            log.error("requestPayment: failed to publish payment request for reservationId={}", request.reservationId(), e);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(ApiResponse.fail("결제 요청 처리 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
         }
 
-        return ResponseEntity.ok(ApiResponse.success("결제 요청이 접수되었습니다.", Map.of(
+        return ResponseEntity.accepted().body(ApiResponse.success("결제 요청이 접수되었습니다.", Map.of(
                 "reservationId", request.reservationId())));
     }
 
-    @GetMapping("/notifications/subscribe")
-    public SseEmitter subscribe(Authentication authentication) {
-        return pushNotificationService.subscribe(authentication.getName());
+    // 결제 결과 폴링 — 클라이언트가 3초 간격으로 조회, 30초 초과 시 클라이언트에서 실패 처리
+    @GetMapping("/payments/status/{reservationId}")
+    public ResponseEntity<ApiResponse> getPaymentStatus(@PathVariable String reservationId,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        Optional<PaymentResultEvent> result = paymentResultStore.get(reservationId);
+        if (result.isEmpty()) {
+            return ResponseEntity.accepted().body(ApiResponse.success("결제 처리 중입니다.", null));
+        }
+
+        PaymentResultEvent paymentResult = result.get();
+        if (!paymentResult.userId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.fail("접근 권한이 없습니다."));
+        }
+
+        if (paymentResult.success()) {
+            return ResponseEntity.ok(ApiResponse.success("결제가 완료되었습니다.", Map.of(
+                    "reservationId", paymentResult.reservationId(),
+                    "processedAt", paymentResult.processedAt().toString())));
+        }
+        return ResponseEntity.ok(ApiResponse.fail("결제가 실패했습니다."));
     }
 }

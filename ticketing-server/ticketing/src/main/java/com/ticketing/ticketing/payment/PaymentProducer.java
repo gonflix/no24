@@ -13,7 +13,8 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor // 생성자 주입
 public class PaymentProducer {
-    private static final String PAYMENT_QUEUE_KEY = "PAYMENT_QUEUE";
+    private static final String PAYMENT_QUEUE_KEY = "payment-requested";
+
     private final KafkaTemplate<String, PaymentRequestedEvent> kafkaTemplate;
     private final AppProperties appProperties;
 

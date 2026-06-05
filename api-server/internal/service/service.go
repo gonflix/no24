@@ -187,7 +187,7 @@ func waitingQueueWorker(ctx context.Context, event_id string, wqRepository *queu
 			}
 
 		default:
-			// 0순위 유저를 제거하고 토큰 발급
+			// 0순위 유저를 꺼내서 토큰 발급
 			user_id, err := wqRepository.Pop(ctx, event_id)
 			if err != nil {
 				if err == queue.ErrQueueEmpty {

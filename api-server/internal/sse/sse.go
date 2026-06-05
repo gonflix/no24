@@ -140,6 +140,7 @@ func (h *Hub) HandleSSE(c *echo.Context, ctx context.Context, wqRepository *queu
 				continue
 			}
 			slog.Info("sse write token", "user_id", userID, "token", token)
+			// TODO: 토큰 발송 후 클라이언트에서 SSE 연결 종료 예상. 다만 클라이언트에서 연결 종료 안할 경우 대비하여 연결 종료 처리
 
 		case <-ticker.C: // 주기적으로 순서 알림
 			rank, err := wqRepository.Get(c.Request().Context(), eventID, userID)
