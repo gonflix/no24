@@ -36,7 +36,7 @@ jobs:
         # 큰따옴표 필수! 없으면 줄바꿈 무조건 깨짐
       - name: Check .env
         if: steps.flags.outputs.build_api == 'true'
-        run: cat .env 
+        run: cat ./api-server/.env 
 
 
       # 1. Go 서버 빌드 및 푸시 (no24-api).

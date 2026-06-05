@@ -288,47 +288,6 @@ no24/
 
 ---
 
-## CI/CD
-
-GitHub Actions를 통한 자동 빌드 및 배포:
-
-| 커밋 메시지 트리거 | 동작 |
-|---|---|
-| `[build-api]` | API Server Docker 이미지 빌드 & 푸시 |
-| `[build-tkt]` | Ticketing Server Docker 이미지 빌드 & 푸시 |
-
-빌드 완료 후 `infra/` 내 deployment manifest의 이미지 태그를 커밋 SHA로 자동 업데이트합니다.
-
----
-
-## 로컬 개발 환경 설정
-
-### 의존성
-- Go 1.25+
-- Java 21+
-- Docker & Kubernetes (kubectl)
-
-### 인프라 실행
-```bash
-kubectl apply -f infra/kafka-service.yaml
-kubectl apply -f infra/redis-service.yaml
-kubectl apply -f infra/mysql-service.yaml
-```
-
-### API Server 실행
-```bash
-cd api-server
-go run cmd/main.go
-```
-
-### Ticketing Server 실행
-```bash
-cd ticketing-server/ticketing
-./gradlew bootRun
-```
-
----
-
 ## 부하 테스트
 
 `ticketing-server/ticketing/src/main/resources/static/stress-client.html`을 브라우저에서 열면 E2E 스트레스 테스트를 실행할 수 있습니다.
