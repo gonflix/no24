@@ -30,10 +30,11 @@ jobs:
           echo "build_tkt=${{ contains(github.event.head_commit.message, '[build-tkt]') }}" >> "$GITHUB_OUTPUT"
 
       - name: Create .env file
+        if: steps.flags.outputs.build_api == 'true'
         env:
-          ENV_FILE: ${{ secrets.ENV_FILE_API_SERVER }}
-        run: echo "$ENV_FILE" > ./api-server/.env
-        
+          ENV_FILE_API_SERVER: ${{ secrets.ENV_FILE_API_SERVER }}
+        run: echo "$ENV_FILE_API_SERVER" > ./api-server/.env
+
       - name: Check .env
         if: steps.flags.outputs.build_api == 'true'
         run: cat ./api-server/.env 
