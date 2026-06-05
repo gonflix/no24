@@ -1,15 +1,15 @@
 package com.ticketing.ticketing.payment;
 
-import java.time.Instant;
-import java.util.concurrent.ThreadLocalRandom;
-
+import com.ticketing.ticketing.kafka.PaymentRequestedEvent;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import com.ticketing.ticketing.kafka.PaymentRequestedEvent;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Instant;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
 @Component
@@ -17,9 +17,18 @@ import lombok.extern.slf4j.Slf4j;
 public class PaymentProcessor {
 
     private final PaymentResultStore paymentResultStore;
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "${app.kafka.payment-topic}", groupId = "ticketing-payment", containerFactory = "paymentKafkaListenerContainerFactory")
-    public void process(PaymentRequestedEvent event) {
+    public void process(String message) {
+        PaymentRequestedEvent event;
+        try {
+            event = objectMapper.readValue(message, PaymentRequestedEvent.class);
+        } catch (JacksonException e) {
+            log.error("Failed to deserialize PaymentRequestedEvent. message={}", message, e);
+            return;
+        }
+
         log.info("Payment processing started. reservationId={}", event.reservationId());
 
         try {
@@ -32,13 +41,14 @@ public class PaymentProcessor {
             return;
         }
 
-        boolean success = ThreadLocalRandom.current().nextInt(100) < 85; // 결제 성공확률을 85%로 설정
+        boolean success = ThreadLocalRandom.current().nextInt(100) < 85;
         PaymentResultEvent result = new PaymentResultEvent(
                 event.reservationId(),
                 event.userId(),
                 success,
                 success ? "결제가 성공했습니다." : "결제가 실패했습니다.",
-                Instant.now());
+                Instant.now()
+        );
 
         paymentResultStore.save(result);
         log.info("Payment processed. reservationId={}, success={}", event.reservationId(), success);

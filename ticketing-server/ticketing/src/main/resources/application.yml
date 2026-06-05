@@ -31,3 +31,4 @@ app:
     expiration-seconds: 3600
   kafka:
     payment-topic: ticketing.payment.requested
+    payment-concurrency: 5   # Kafka 파티션 수와 반드시 일치시킬 것

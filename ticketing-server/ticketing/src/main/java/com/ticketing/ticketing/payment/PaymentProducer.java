@@ -8,19 +8,28 @@ import org.springframework.stereotype.Service;
 import com.ticketing.ticketing.config.AppProperties;
 import com.ticketing.ticketing.kafka.PaymentRequestedEvent;
 
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 
 @Service
-@RequiredArgsConstructor // 생성자 주입
+@RequiredArgsConstructor
 public class PaymentProducer {
     private static final String PAYMENT_QUEUE_KEY = "payment-requested";
 
-    private final KafkaTemplate<String, PaymentRequestedEvent> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
     private final AppProperties appProperties;
+    private final ObjectMapper objectMapper;
 
     public void send(PaymentRequestedEvent event) {
+        String json;
         try {
-            kafkaTemplate.send(appProperties.kafka().paymentTopic(), PAYMENT_QUEUE_KEY, event).get();
+            json = objectMapper.writeValueAsString(event);
+        } catch (JacksonException e) {
+            throw new IllegalStateException("Failed to serialize PaymentRequestedEvent", e);
+        }
+        try {
+            kafkaTemplate.send(appProperties.kafka().paymentTopic(), PAYMENT_QUEUE_KEY, json).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Kafka payment event publish interrupted", e);
