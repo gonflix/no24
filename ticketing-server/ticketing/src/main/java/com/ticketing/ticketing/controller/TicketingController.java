@@ -86,7 +86,6 @@ public class TicketingController {
         String userId = authentication.getName();
         Optional<PaymentResultEvent> result = paymentResultStore.get(reservationId);
         if (result.isEmpty()) {
-            log.info("getPaymentStatus 결제 중 추정: userId {} reservationId {}", userId, reservationId);
             return ResponseEntity.accepted().body(ApiResponse.success("결제 처리 중입니다.", null));
         }
 

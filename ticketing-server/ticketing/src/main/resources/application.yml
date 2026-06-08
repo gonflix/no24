@@ -32,8 +32,7 @@ app:
   kafka:
     payment-topic: ticketing.payment.requested
     payment-concurrency: 5   # Kafka 파티션 수와 반드시 일치시킬 것
-
-logging:
-  level:
-    org.springframework.kafka: DEBUG
-    org.apache.kafka.clients.consumer: DEBUG
+# logging:
+#   level:
+#     org.springframework.kafka: DEBUG
+#     org.apache.kafka.clients.consumer: DEBUG

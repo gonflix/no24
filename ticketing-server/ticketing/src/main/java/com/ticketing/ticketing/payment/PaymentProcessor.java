@@ -34,8 +34,8 @@ public class PaymentProcessor {
         log.info("Payment processing started. reservationId={}", event.reservationId());
 
         try {
-            // PG 결제 처리 시뮬레이션 (7~13초)
-            int delayMs = 7000 + ThreadLocalRandom.current().nextInt(6000);
+            // PG 결제 처리 시뮬레이션 (카드, 간편결제 보통 2~5초)
+            int delayMs = 2000 + ThreadLocalRandom.current().nextInt(3000);
             Thread.sleep(delayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
