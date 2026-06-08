@@ -8,6 +8,6 @@ public record AppProperties(Jwt jwt, Kafka kafka) {
     public record Jwt(String issuer, String audience, long expirationSeconds) {
     }
 
-    public record Kafka(String paymentTopic, int paymentConcurrency) {
+    public record Kafka(String paymentTopic, int paymentConcurrency, int paymentWorkerThreads) {
     }
 }

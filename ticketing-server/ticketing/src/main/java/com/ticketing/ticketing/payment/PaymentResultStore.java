@@ -1,17 +1,16 @@
 package com.ticketing.ticketing.payment;
 
-import java.time.Duration;
-import java.util.Optional;
-
-import org.redisson.api.RBucket;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RMapCache;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
-
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -21,14 +20,20 @@ public class PaymentResultStore {
     private final RedissonClient redissonClient;
     private final ObjectMapper objectMapper;
 
-    private static final String KEY_PREFIX = "payment:result:";
-    private static final Duration TTL = Duration.ofMinutes(10);
+    private static final String MAP_KEY = "payment:results";
+    private static final long TTL_MINUTES = 10;
+
+    private RMapCache<String, String> resultMap;
+
+    @PostConstruct
+    void init() {
+        this.resultMap = redissonClient.getMapCache(MAP_KEY);
+    }
 
     public void save(PaymentResultEvent result) {
         try {
             String json = objectMapper.writeValueAsString(result);
-            RBucket<String> bucket = redissonClient.getBucket(KEY_PREFIX + result.reservationId());
-            bucket.set(json, TTL);
+            resultMap.put(result.reservationId(), json, TTL_MINUTES, TimeUnit.MINUTES);
             log.info("Saved payment result. reservationId={}, success={}", result.reservationId(), result.success());
         } catch (JacksonException e) {
             throw new RuntimeException("Failed to serialize payment result. reservationId=" + result.reservationId(), e);
@@ -36,8 +41,7 @@ public class PaymentResultStore {
     }
 
     public Optional<PaymentResultEvent> get(String reservationId) {
-        RBucket<String> bucket = redissonClient.getBucket(KEY_PREFIX + reservationId);
-        String json = bucket.get();
+        String json = resultMap.get(reservationId);
         if (json == null) {
             return Optional.empty();
         }
