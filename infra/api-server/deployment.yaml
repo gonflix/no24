@@ -26,6 +26,8 @@ spec:
         envFrom:
         - configMapRef:
             name: api-sv-config
+        - secretRef:
+            name: api-sv-local-jwt-secret
         resources:
           requests:
             cpu: "100m"

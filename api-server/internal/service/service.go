@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -56,12 +57,12 @@ func InitService(runEnv types.RunEnv, tIssuer, tAudience, tKeyID string) {
 
 func getPrivateKey(runEnv types.RunEnv) (*rsa.PrivateKey, error) {
 	switch runEnv {
-	case types.RunEnvLocal: // 로컬 환경에서는 매번 새로운 키를 생성 (개발 편의)
-		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			panic(err)
+	case types.RunEnvLocal:
+		pemStr := os.Getenv("LOCAL_JWT_PRIVATE_KEY_PEM")
+		if pemStr == "" {
+			return nil, fmt.Errorf("LOCAL_JWT_PRIVATE_KEY_PEM 환경변수가 설정되지 않았습니다")
 		}
-		return privateKey, nil
+		return parsePEMToRSAKey(pemStr)
 
 	case types.RunEnvProd: // 프로덕션 환경에서는 기존 키를 사용. AWS Secrets Manager에서 PEM 형식으로 로드
 		privateKey, err := loadPrivateKeyFromAWS()
