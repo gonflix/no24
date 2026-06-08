@@ -69,7 +69,8 @@ public class TicketingController {
         try {
             paymentProducer.send(new PaymentRequestedEvent(request.reservationId(), userId, request.amount()));
         } catch (IllegalStateException e) {
-            log.error("requestPayment: failed to publish payment request for reservationId={}", request.reservationId(), e);
+            log.error("requestPayment: failed to publish payment request for reservationId={}", request.reservationId(),
+                    e);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(ApiResponse.fail("결제 요청 처리 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
         }
@@ -85,6 +86,7 @@ public class TicketingController {
         String userId = authentication.getName();
         Optional<PaymentResultEvent> result = paymentResultStore.get(reservationId);
         if (result.isEmpty()) {
+            log.info("getPaymentStatus 결제 중 추정: userId {} reservationId {}", userId, reservationId);
             return ResponseEntity.accepted().body(ApiResponse.success("결제 처리 중입니다.", null));
         }
 

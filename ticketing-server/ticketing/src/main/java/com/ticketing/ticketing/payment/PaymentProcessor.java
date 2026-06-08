@@ -1,15 +1,17 @@
 package com.ticketing.ticketing.payment;
 
-import com.ticketing.ticketing.kafka.PaymentRequestedEvent;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Instant;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
-import java.util.concurrent.ThreadLocalRandom;
+import com.ticketing.ticketing.kafka.PaymentRequestedEvent;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
@@ -47,8 +49,7 @@ public class PaymentProcessor {
                 event.userId(),
                 success,
                 success ? "결제가 성공했습니다." : "결제가 실패했습니다.",
-                Instant.now()
-        );
+                Instant.now());
 
         paymentResultStore.save(result);
         log.info("Payment processed. reservationId={}, success={}", event.reservationId(), success);
