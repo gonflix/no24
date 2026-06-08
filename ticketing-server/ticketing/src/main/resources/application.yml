@@ -5,7 +5,7 @@ spring:
   application:
     name: ticketing
   kafka:
-    bootstrap-servers: localhost:9092 # Kafka broker address 
+    bootstrap-servers: kafka-service:9092
     # producer:
       # key-serializer: org.apache.kafka.common.serialization.StringSerializer
       # value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
