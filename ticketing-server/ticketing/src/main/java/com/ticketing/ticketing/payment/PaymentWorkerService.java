@@ -10,38 +10,24 @@ import com.ticketing.ticketing.kafka.PaymentRequestedEvent;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class PaymentWorkerService {
 
     private final PaymentResultStore paymentResultStore;
-    private final MeterRegistry meterRegistry;
+    private final Counter completedCounter;
 
-    private Counter successCounter;
-    private Counter failCounter;
-
-    @PostConstruct
-    void initMetrics() {
-        successCounter = Counter.builder("payment.completed")
-                .tag("success", "true")
-                .description("Completed payment attempts")
-                .register(meterRegistry);
-        failCounter = Counter.builder("payment.completed")
-                .tag("success", "false")
+    public PaymentWorkerService(PaymentResultStore paymentResultStore, MeterRegistry meterRegistry) {
+        this.paymentResultStore = paymentResultStore;
+        this.completedCounter = Counter.builder("payment.completed")
                 .description("Completed payment attempts")
                 .register(meterRegistry);
     }
 
     @Async("paymentWorkerExecutor")
     public void execute(PaymentRequestedEvent event) {
-        // 실제 결제 처리 대신 랜덤한 지연과 성공 여부 시뮬레이션
-        // log.info("Worker started. reservationId={}", event.reservationId());
-
         try {
             int delayMs = 2000 + ThreadLocalRandom.current().nextInt(3000);
             Thread.sleep(delayMs);
@@ -60,8 +46,6 @@ public class PaymentWorkerService {
                 Instant.now());
 
         paymentResultStore.save(result);
-        (success ? successCounter : failCounter).increment();
-        // log.info("Worker done. reservationId={}, success={}", event.reservationId(),
-        // success);
+        completedCounter.increment();
     }
 }

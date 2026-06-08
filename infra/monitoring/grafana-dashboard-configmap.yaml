@@ -20,7 +20,7 @@ data:
             },
             "overrides": []
           },
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
           "id": 1,
           "options": {
             "legend": {"displayMode": "list", "placement": "bottom"},
@@ -28,54 +28,13 @@ data:
           },
           "targets": [
             {
-              "expr": "rate(payment_completed_total{application=\"ticketing\",success=\"true\"}[1m])",
-              "legendFormat": "Success",
+              "expr": "rate(payment_completed_total{application=\"ticketing\"}[1m])",
+              "legendFormat": "TPS",
               "refId": "A"
-            },
-            {
-              "expr": "rate(payment_completed_total{application=\"ticketing\",success=\"false\"}[1m])",
-              "legendFormat": "Failed",
-              "refId": "B"
             }
           ],
           "title": "Payment TPS",
           "type": "timeseries"
-        },
-        {
-          "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "fieldConfig": {
-            "defaults": {
-              "color": {"mode": "thresholds"},
-              "max": 100,
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {"color": "red", "value": null},
-                  {"color": "yellow", "value": 70},
-                  {"color": "green", "value": 85}
-                ]
-              },
-              "unit": "percent"
-            }
-          },
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-          "id": 2,
-          "options": {
-            "orientation": "auto",
-            "reduceOptions": {"calcs": ["lastNotNull"]},
-            "showThresholdLabels": false,
-            "showThresholdMarkers": true
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(payment_completed_total{application=\"ticketing\",success=\"true\"}[1m])) / sum(rate(payment_completed_total{application=\"ticketing\"}[1m])) * 100",
-              "legendFormat": "Success Rate",
-              "refId": "A"
-            }
-          ],
-          "title": "Payment Success Rate (%)",
-          "type": "gauge"
         },
         {
           "datasource": {"type": "prometheus", "uid": "prometheus"},
