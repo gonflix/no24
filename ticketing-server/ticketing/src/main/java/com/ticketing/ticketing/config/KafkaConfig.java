@@ -1,38 +1,30 @@
 package com.ticketing.ticketing.config;
 
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.KafkaAdmin.NewTopics;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 @Configuration
 public class KafkaConfig {
-
-    // 앱 시작 시 토픽이 없으면 자동 생성. 파티션 수 = concurrency와 반드시 일치.
-    // 이미 존재하는 토픽의 파티션 수는 자동으로 늘어나지 않으므로,
-    // 기존 토픽이 있다면 kafka-topics.sh --alter 로 수동 증설 필요.
-    @Bean
-    NewTopics paymentTopics(
-            @Value("${app.kafka.payment-topic}") String topic,
-            @Value("${app.kafka.payment-concurrency}") int partitions) {
-        return new NewTopics(
-                TopicBuilder.name(topic).partitions(partitions).replicas(1).build()
-        );
-    }
 
     @Bean
     ConsumerFactory<String, String> paymentConsumerFactory(
@@ -57,9 +49,21 @@ public class KafkaConfig {
         return factory;
     }
 
+    // ProducerFactory 빈 생성 시작 전에 AdminClient로 토픽을 동기적으로 생성.
+    // DefaultKafkaProducerFactory가 반환되기 전에 토픽이 반드시 존재함을 보장.
     @Bean
     ProducerFactory<String, String> paymentProducerFactory(
-            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
+            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
+            @Value("${app.kafka.payment-topic}") String topic,
+            @Value("${app.kafka.payment-concurrency}") int partitions) throws Exception {
+        try (AdminClient admin = AdminClient.create(
+                Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
+            admin.createTopics(List.of(new NewTopic(topic, partitions, (short) 1))).all().get();
+        } catch (ExecutionException e) {
+            if (!(e.getCause() instanceof TopicExistsException)) {
+                throw new RuntimeException("Kafka topic creation failed: " + topic, e.getCause());
+            }
+        }
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
