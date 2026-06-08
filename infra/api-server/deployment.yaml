@@ -20,7 +20,7 @@ spec:
       - name: dockerhub-config
       containers:
       - name: api-server-container
-        image: docker.io/gonflix/no24-api:c8e476d4ef7e78b995ccb3267f13d80c6660c857
+        image: docker.io/gonflix/no24-api:5e2e2e2a3d37439c27c340320c2676b4135d7e2b
         ports:
         - containerPort: 8080 # Go 앱이 리스닝하는 포트
         envFrom:
