@@ -24,6 +24,15 @@ spring:
       port: 6379
       password: ""
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  metrics:
+    tags:
+      application: ticketing
+
 app:
   jwt:
     issuer: "no24-api-server"

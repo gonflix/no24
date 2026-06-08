@@ -1,0 +1,209 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard
+  namespace: default
+data:
+  ticketing.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "graphTooltip": 1,
+      "panels": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {"fillOpacity": 10, "lineWidth": 2},
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "id": 1,
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom"},
+            "tooltip": {"mode": "multi"}
+          },
+          "targets": [
+            {
+              "expr": "rate(payment_completed_total{application=\"ticketing\",success=\"true\"}[1m])",
+              "legendFormat": "Success",
+              "refId": "A"
+            },
+            {
+              "expr": "rate(payment_completed_total{application=\"ticketing\",success=\"false\"}[1m])",
+              "legendFormat": "Failed",
+              "refId": "B"
+            }
+          ],
+          "title": "Payment TPS",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "max": 100,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "green", "value": 85}
+                ]
+              },
+              "unit": "percent"
+            }
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "id": 2,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"]},
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(payment_completed_total{application=\"ticketing\",success=\"true\"}[1m])) / sum(rate(payment_completed_total{application=\"ticketing\"}[1m])) * 100",
+              "legendFormat": "Success Rate",
+              "refId": "A"
+            }
+          ],
+          "title": "Payment Success Rate (%)",
+          "type": "gauge"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {"fillOpacity": 10, "lineWidth": 2},
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "id": 3,
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom"},
+            "tooltip": {"mode": "multi"}
+          },
+          "targets": [
+            {
+              "expr": "sum(jvm_memory_used_bytes{application=\"ticketing\",area=\"heap\"})",
+              "legendFormat": "Used",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(jvm_memory_max_bytes{application=\"ticketing\",area=\"heap\"})",
+              "legendFormat": "Max",
+              "refId": "B"
+            }
+          ],
+          "title": "JVM Heap",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {"fillOpacity": 10, "lineWidth": 2},
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "id": 4,
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom"},
+            "tooltip": {"mode": "multi"}
+          },
+          "targets": [
+            {
+              "expr": "tomcat_threads_busy_threads{application=\"ticketing\"}",
+              "legendFormat": "Active",
+              "refId": "A"
+            },
+            {
+              "expr": "tomcat_threads_config_max_threads{application=\"ticketing\"}",
+              "legendFormat": "Max",
+              "refId": "B"
+            }
+          ],
+          "title": "Tomcat Threads",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {"fillOpacity": 10, "lineWidth": 2},
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "id": 5,
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom"},
+            "tooltip": {"mode": "multi"}
+          },
+          "targets": [
+            {
+              "expr": "executor_active_threads{application=\"ticketing\",name=\"paymentWorkerExecutor\"}",
+              "legendFormat": "Active",
+              "refId": "A"
+            },
+            {
+              "expr": "executor_pool_size_threads{application=\"ticketing\",name=\"paymentWorkerExecutor\"}",
+              "legendFormat": "Pool Size",
+              "refId": "B"
+            }
+          ],
+          "title": "Worker Pool — Active Threads",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {"fillOpacity": 10, "lineWidth": 2},
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "id": 6,
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom"},
+            "tooltip": {"mode": "multi"}
+          },
+          "targets": [
+            {
+              "expr": "executor_queued_tasks{application=\"ticketing\",name=\"paymentWorkerExecutor\"}",
+              "legendFormat": "Queue Depth",
+              "refId": "A"
+            }
+          ],
+          "title": "Worker Pool — Queue Depth",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 39,
+      "tags": ["ticketing", "performance"],
+      "time": {"from": "now-5m", "to": "now"},
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Ticketing Server Performance",
+      "uid": "ticketing-perf",
+      "version": 1
+    }

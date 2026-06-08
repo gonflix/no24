@@ -55,7 +55,8 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/", "/stress-client.html", "/favicon.ico", "/error")
+                        .requestMatchers(HttpMethod.GET, "/", "/stress-client.html", "/favicon.ico", "/error",
+                                "/actuator/prometheus", "/actuator/health")
                         .permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated())

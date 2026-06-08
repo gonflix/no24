@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 
 import com.ticketing.ticketing.kafka.PaymentRequestedEvent;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,6 +20,22 @@ import lombok.extern.slf4j.Slf4j;
 public class PaymentWorkerService {
 
     private final PaymentResultStore paymentResultStore;
+    private final MeterRegistry meterRegistry;
+
+    private Counter successCounter;
+    private Counter failCounter;
+
+    @PostConstruct
+    void initMetrics() {
+        successCounter = Counter.builder("payment.completed")
+                .tag("success", "true")
+                .description("Completed payment attempts")
+                .register(meterRegistry);
+        failCounter = Counter.builder("payment.completed")
+                .tag("success", "false")
+                .description("Completed payment attempts")
+                .register(meterRegistry);
+    }
 
     @Async("paymentWorkerExecutor")
     public void execute(PaymentRequestedEvent event) {
@@ -41,6 +60,7 @@ public class PaymentWorkerService {
                 Instant.now());
 
         paymentResultStore.save(result);
+        (success ? successCounter : failCounter).increment();
         // log.info("Worker done. reservationId={}, success={}", event.reservationId(),
         // success);
     }
