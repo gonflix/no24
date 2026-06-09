@@ -85,17 +85,12 @@ data:
           },
           "targets": [
             {
-              "expr": "tomcat_threads_busy_threads{application=\"ticketing\"}",
-              "legendFormat": "Active",
+              "expr": "sum(http_server_requests_active_seconds_count{application=\"ticketing\"})",
+              "legendFormat": "Active Requests",
               "refId": "A"
-            },
-            {
-              "expr": "tomcat_threads_config_max_threads{application=\"ticketing\"}",
-              "legendFormat": "Max",
-              "refId": "B"
             }
           ],
-          "title": "Tomcat Threads",
+          "title": "HTTP Active Requests",
           "type": "timeseries"
         },
         {
