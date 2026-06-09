@@ -41,7 +41,7 @@ app:
   kafka:
     payment-topic: ticketing.payment.requested
     payment-concurrency: 5      # Kafka 파티션 수와 반드시 일치시킬 것
-    payment-worker-threads: 3  # 실제 결제 처리 worker 수 (concurrency와 독립적으로 조정)
+    payment-worker-threads: 0  # 실제 결제 처리 worker 수 (concurrency와 독립적으로 조정)
 # logging:
 #   level:
 #     org.springframework.kafka: DEBUG
