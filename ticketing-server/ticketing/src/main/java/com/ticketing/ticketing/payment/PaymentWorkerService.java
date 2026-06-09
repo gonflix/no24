@@ -29,7 +29,7 @@ public class PaymentWorkerService {
     @Async("paymentWorkerExecutor")
     public void execute(PaymentRequestedEvent event) {
         try {
-            int delayMs = 2000 + ThreadLocalRandom.current().nextInt(3000);
+            int delayMs = 1000 + ThreadLocalRandom.current().nextInt(1000); // 1-2초 랜덤 지연
             Thread.sleep(delayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
