@@ -37,7 +37,8 @@ public class PaymentWorkerService {
             return;
         }
 
-        boolean success = ThreadLocalRandom.current().nextInt(100) < 85;
+        // boolean success = ThreadLocalRandom.current().nextInt(100) < 85;
+        boolean success = true; // 결제 성공률 100%로 고정 (테스트 용이성 위해)
         PaymentResultEvent result = new PaymentResultEvent(
                 event.reservationId(),
                 event.userId(),
