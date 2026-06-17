@@ -7,6 +7,5 @@ public record PaymentResultEvent(
         String userId,
         boolean success,
         String message,
-        Instant processedAt
-) {
+        Instant processedAt) {
 }

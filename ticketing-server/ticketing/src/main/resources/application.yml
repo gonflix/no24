@@ -4,20 +4,23 @@ server:
 spring:
   application:
     name: ticketing
+  datasource:
+    url: jdbc:postgresql://postgres-service:5432/ticketing
+    username: ticketing
+    password: ticketing
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_batch_fetch_size: 100
+    open-in-view: false
   kafka:
     bootstrap-servers: kafka-service:9092
-    # producer:
-      # key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      # value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      # retries: 0
-      # batch-size: 16384
     consumer:
       group-id: ticketing-group
-      # auto-offset-reset: earliest  # What to do when no initial offset is found
-      # key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      # value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      # properties:
-      #   spring.json.trusted.packages: com.ticketing.ticketing.kafka
   data:
     redis:
       host: redis-service
@@ -40,9 +43,5 @@ app:
     expiration-seconds: 3600
   kafka:
     payment-topic: ticketing.payment.requested
-    payment-concurrency: 5      # Kafka 파티션 수와 반드시 일치시킬 것
+    payment-concurrency: 5       # Kafka 파티션 수와 반드시 일치시킬 것
     payment-worker-threads: 100  # 실제 결제 처리 worker 수 (concurrency와 독립적으로 조정)
-# logging:
-#   level:
-#     org.springframework.kafka: DEBUG
-#     org.apache.kafka.clients.consumer: DEBUG

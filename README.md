@@ -30,18 +30,18 @@ SSE 연결 중 3초 간격으로 현재 순위를 유저에게 전송한다. Red
 - Ticketing Server는 Spring Security OAuth2 Resource Server로 JWT를 검증한다.
 - Redisson `tryLock(0, 0, SECONDS)` — 비차단 분산 락으로 좌석을 선점한다.
   - 선점 실패(이미 예약된 좌석) → 409 반환, 재시도 불가
-  - 선점 성공 → Redis MapCache에 10분 TTL로 예약 정보 저장, `reservationId`(UUID) 반환
+  - 선점 성공 → Redis에 10분 TTL로 예약 캐시 저장 + DB에 `Reservation(PENDING)` 및 `Seat(RESERVED)` 즉시 저장 → `reservationId`(UUID) 반환
 
 ### Step 5 — 결제 요청 (Kafka 발행)
-유저가 `POST /api/payments/request`를 호출하면 `PaymentRequestedEvent`를 Kafka 토픽(`ticketing.payment.requested`)에 발행하고 202 Accepted를 반환한다.
+유저가 `POST /api/payments/request`를 호출하면 예약 유효성을 검증한 후 `PaymentRequestedEvent`를 Kafka 토픽(`ticketing.payment.requested`)에 발행하고 202 Accepted를 즉시 반환한다.
 
-### Step 6 — 결제 처리 (Kafka Consumer)
-`PaymentProcessor`가 Kafka 이벤트를 소비한다. PG 결제 처리를 시뮬레이션(7~13초 소요)하고, 완료된 결과(`PaymentResultEvent`)를 Redis에 저장한다.
+### Step 6 — 결제 처리 (워커 풀)
+`PaymentProcessor`(Kafka consumer, concurrency=5)가 이벤트를 소비하여 `PaymentWorkerService`에 위임한다. 워커는 별도 스레드 풀(`paymentWorkerExecutor`, threads=100)에서 실행된다.
 
 ```
-Redis Key : payment:result:{reservationId}
-Value     : PaymentResultEvent JSON (성공 여부, 처리 시각 등)
-TTL       : 10분
+1. PG 호출 시뮬레이션 (1~2초 랜덤 지연)
+2. 결과를 Redis에 저장 (payment:results, 10분 TTL)
+3. 성공 시 DB 업데이트 — Reservation CONFIRMED + Seat SOLD + Payment 저장
 ```
 
 ### Step 7 — 결제 결과 폴링
@@ -62,16 +62,16 @@ TTL       : 10분
 | 서비스 | 언어/프레임워크 | 역할 |
 |---|---|---|
 | `api-server` | Go 1.25 + Echo v5 | 대기열 관리, 순번 발급, JWT 발행 |
-| `ticketing-server` | Java 21 + Spring Boot 4.0 | 좌석 예약, 결제 처리, 결제 결과 조회 |
+| `ticketing-server` | Java 21 + Spring Boot 4.0 | 좌석 예약, 결제 처리 |
 
 ---
 
 ## 기술 스택
 
 ### Infrastructure
-- **Kafka** — 서비스 간 이벤트 스트리밍 및 replica 간 SSE 토큰 브로드캐스트
-- **Redis** — 대기열 Sorted Set, 분산 락(Redisson), 좌석 예약 캐시, 결제 결과 저장
-- **MySQL** — 이벤트(공연) 정보 영구 저장
+- **Kafka** — 결제 이벤트 비동기 처리 (`ticketing.payment.requested`) 및 API Server replica 간 SSE 토큰 브로드캐스트
+- **Redis** — 대기열 Sorted Set, 분산 락(Redisson), 좌석 예약 캐시
+- **PostgreSQL** — 좌석·예약·결제 영구 저장
 - **Kubernetes** — 전체 인프라 오케스트레이션
 
 ### API Server (Go)
@@ -83,9 +83,11 @@ TTL       : 10분
 
 ### Ticketing Server (Java)
 - Spring Security + OAuth2 Resource Server — Bearer JWT 검증 (JWKS 원격 조회)
-- Redisson — 좌석별 RLock 분산 락 + RMapCache 예약 캐시
-- Spring Kafka — 결제 이벤트 Producer / Consumer (concurrency=1, 순차 처리)
-- Redis RBucket — 결제 결과 저장 (10분 TTL)
+- Redisson — 좌석별 RLock 분산 락 + RBucket 예약 캐시 + RMapCache 결제 결과 저장
+- Spring Kafka — 결제 이벤트 Producer / Consumer (concurrency=5, 파티션 수 일치)
+- `PaymentWorkerService` — `@Async` 워커 풀 (threads=100, CallerRunsPolicy backpressure)
+- Spring Data JPA (PostgreSQL) — 예약·결제 영구 저장
+- `SeatExpiryScheduler` — 60초 간격으로 만료된 PENDING 예약을 EXPIRED 처리, 좌석 AVAILABLE 복원 및 Redis 캐시 삭제
 
 ---
 
@@ -116,8 +118,8 @@ TTL       : 10분
 
 | Method | Path | 설명 |
 |---|---|---|
-| `POST` | `/api/seats/reserve` | 좌석 예약 (분산 락 선점) |
-| `POST` | `/api/payments/request` | 결제 요청 접수 (Kafka 발행) |
+| `POST` | `/api/seats/reserve` | 좌석 예약 (분산 락 선점 + 즉시 DB 저장) |
+| `POST` | `/api/payments/request` | 결제 요청 접수 (Kafka 발행 → 202 반환) |
 | `GET` | `/api/payments/status/{reservationId}` | 결제 결과 폴링 |
 
 **좌석 예약 응답 (200 OK):**
@@ -127,7 +129,8 @@ TTL       : 10분
   "message": "좌석 확보에 성공했습니다.",
   "data": {
     "reservationId": "550e8400-e29b-41d4-a716-446655440000",
-    "seatId": "A1"
+    "seatId": 1,
+    "expiresAt": "2026-06-18T12:44:56.789Z"
   }
 }
 ```
@@ -158,7 +161,7 @@ TTL       : 10분
   "message": "결제가 완료되었습니다.",
   "data": {
     "reservationId": "550e8400-...",
-    "processedAt": "2026-06-05T12:34:56.789Z"
+    "processedAt": "2026-06-18T12:34:56.789Z"
   }
 }
 ```
@@ -172,16 +175,26 @@ TTL       : 10분
 - 상위 소수(Tier 1)만 실시간 조회하고, 나머지(Tier 2)는 1분 주기 인메모리 스냅샷 활용
 - 클라이언트 체감 지연 없이 Redis 부하를 대폭 절감
 
-### 결제 결과 Redis 폴링
-- SSE 연결 유지 방식 대비 서버 자원 절약 (커넥션 풀 절감)
-- Kafka Consumer가 처리 완료 즉시 `payment:result:{reservationId}`에 저장(TTL 10분)
-- 클라이언트는 3초 간격 폴링, 30초 타임아웃으로 실패 처리
-- 결제 처리는 7~13초 소요(PG 시뮬레이션)되므로 폴링 3~5회 이내에 결과 수신
+### 좌석 예약 동기 DB 저장
+- 좌석 선점 시 Redis 캐시와 DB를 같은 요청에서 저장하여 일관성 보장
+- Redisson 분산 락 내에서 `Reservation(PENDING)` + `Seat(RESERVED)` 를 단일 트랜잭션으로 커밋
+- Kafka 비동기 전달 지연·유실로 인한 Redis-DB 불일치 제거
+
+### 결제 비동기 처리 + 워커 풀
+- 결제 요청량이 순간적으로 급증할 수 있으므로 Kafka로 요청을 버퍼링하여 워커 처리량에 맞게 소비
+- Kafka consumer concurrency=5 (파티션 수와 일치), 실제 PG 호출은 별도 스레드 풀(threads=100)에서 처리
+- `CallerRunsPolicy`: 워커 큐가 포화되면 Kafka consumer 스레드가 직접 실행 → backpressure로 자연스러운 속도 조절
+- 처리 결과는 Redis(`payment:results`, 10분 TTL)에 저장, 클라이언트가 3초 간격 폴링으로 수신
 
 ### 분산 락 (Redisson RLock)
-- 좌석별 `ticketing:lock:seat:{seatId}` 키로 락 적용
+- 좌석별 `ticketing:lock:seat:{eventId}:{seatId}` 키로 락 적용
 - `tryLock(0, 0, SECONDS)` — 대기 없이 즉시 실패, 재시도 없음
 - 이중 예약 완전 방지, 동시 요청 수백 건에도 단 한 건만 선점 성공
+
+### 예약 만료 스케줄러 (SeatExpiryScheduler)
+- 60초 간격으로 PENDING 상태이고 `expiresAt`이 지난 예약을 일괄 조회 (JOIN FETCH로 N+1 방지)
+- Reservation → EXPIRED, Seat → AVAILABLE 상태 전환 + Redis 예약 캐시 즉시 삭제
+- 워커가 결제 성공 시 Reservation을 CONFIRMED로 전환하므로 정상 결제된 예약은 만료 대상에서 자동 제외
 
 ### Kafka 토큰 브로드캐스트
 - API Server replica가 여러 개일 때 JWT 발급 인스턴스 ≠ SSE 연결 인스턴스 가능
@@ -193,14 +206,32 @@ TTL       : 10분
 ## 데이터베이스 스키마
 
 ```sql
-CREATE TABLE events (
-    id         INT PRIMARY KEY,
-    name       VARCHAR(50) UNIQUE,   -- e.g. "bts_2026_seoul"
-    status     ENUM('A', 'N'),       -- Active / Inactive
-    start_at   TIMESTAMP,
-    end_at     TIMESTAMP,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
+CREATE TABLE seat (
+    id       BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    event_id BIGINT NOT NULL,
+    grade    VARCHAR(50) NOT NULL,
+    section  VARCHAR(50) NOT NULL,
+    status   VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE'  -- AVAILABLE | RESERVED | SOLD
+);
+
+CREATE TABLE reservation (
+    id          UUID PRIMARY KEY,
+    user_id     VARCHAR(255) NOT NULL,
+    seat_id     BIGINT NOT NULL REFERENCES seat(id),
+    status      VARCHAR(20) NOT NULL,                  -- PENDING | ONGOING | CONFIRMED | EXPIRED
+    reserved_at TIMESTAMP NOT NULL,
+    expires_at  TIMESTAMP NOT NULL
+);
+
+CREATE TABLE payment (
+    id             UUID PRIMARY KEY,
+    reservation_id UUID NOT NULL REFERENCES reservation(id),
+    user_id        VARCHAR(255) NOT NULL,
+    amount         BIGINT NOT NULL,
+    payment_method VARCHAR(50) NOT NULL,
+    pg_tid         VARCHAR(255),
+    status         VARCHAR(20) NOT NULL,               -- PAID | REFUNDED
+    paid_at        TIMESTAMP NOT NULL
 );
 ```
 
@@ -211,20 +242,7 @@ CREATE TABLE events (
 | 키 패턴 | 자료구조 | TTL | 용도 |
 |---|---|---|---|
 | `waiting:{event_id}` | Sorted Set | 없음 | 대기열 (score = 삽입 시각 UnixNano) |
-| `ticketing:seat:reservations` | RMapCache | 10분 | 좌석 예약 정보 |
-| `ticketing:lock:seat:{seatId}` | RLock | 없음 | 좌석 분산 락 |
-| `payment:result:{reservationId}` | RBucket(String) | 10분 | 결제 결과 (JSON) |
-
----
-
-## 부하 테스트
-
-`ticketing-server/ticketing/src/main/resources/static/stress-client.html`을 브라우저에서 열면 E2E 스트레스 테스트를 실행할 수 있습니다.
-
-**테스트 시나리오 (유저 1명 기준):**
-1. SSE 연결 → 대기열 입장 → JWT 수신
-2. JWT로 좌석 예약 → `reservationId` 획득
-3. 무작위 대기 후 결제 요청 (202 Accepted)
-4. 3초 간격 폴링 → 결제 완료/실패 확인 (30초 타임아웃)
-
-**측정 지표:** JWT 획득 수, 좌석 예약 수, 결제 완료 수, 실패 수, 각 단계별 평균 지연
+| `reserve:{eventId}:{seatId}` | RBucket | 10분 | 좌석 선점 캐시 (중복 예약 빠른 차단) |
+| `reservation:{reservationId}` | RBucket | 10분 | reservationId 기반 예약 조회 캐시 |
+| `ticketing:lock:seat:{eventId}:{seatId}` | RLock | 없음 | 좌석 분산 락 |
+| `payment:results` | RMapCache | 10분 | 결제 결과 (key: reservationId, value: JSON) |

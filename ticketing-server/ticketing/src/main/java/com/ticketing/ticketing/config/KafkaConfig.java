@@ -1,5 +1,10 @@
 package com.ticketing.ticketing.config;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -18,11 +23,6 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 @EnableKafka
 @Configuration
@@ -51,8 +51,6 @@ public class KafkaConfig {
         return factory;
     }
 
-    // ProducerFactory 빈 생성 시작 전에 AdminClient로 토픽을 동기적으로 생성.
-    // DefaultKafkaProducerFactory가 반환되기 전에 토픽이 반드시 존재함을 보장.
     @Bean
     ProducerFactory<String, String> paymentProducerFactory(
             @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,

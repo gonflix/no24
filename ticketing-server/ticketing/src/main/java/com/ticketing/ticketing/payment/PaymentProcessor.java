@@ -18,7 +18,10 @@ public class PaymentProcessor {
     private final PaymentWorkerService paymentWorkerService;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "${app.kafka.payment-topic}", groupId = "ticketing-payment", containerFactory = "paymentKafkaListenerContainerFactory")
+    @KafkaListener(
+            topics = "${app.kafka.payment-topic}",
+            groupId = "ticketing-payment",
+            containerFactory = "paymentKafkaListenerContainerFactory")
     public void process(String message) {
         PaymentRequestedEvent event;
         try {

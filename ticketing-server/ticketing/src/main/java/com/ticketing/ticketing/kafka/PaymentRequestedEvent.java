@@ -1,4 +1,4 @@
 package com.ticketing.ticketing.kafka;
 
-public record PaymentRequestedEvent(String reservationId, String userId, long amount) {
+public record PaymentRequestedEvent(String reservationId, String userId, long amount, String paymentMethod) {
 }

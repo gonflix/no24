@@ -5,6 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 
 public record PaymentRequest(
         @NotBlank String reservationId,
-        @Min(1) long amount
-) {
+        @Min(1) long amount,
+        @NotBlank String paymentMethod) {
 }
