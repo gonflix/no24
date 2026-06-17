@@ -5,16 +5,16 @@ spring:
   application:
     name: ticketing
   datasource:
-    url: jdbc:postgresql://postgres-service:5432/ticketing
-    username: ticketing
-    password: ticketing
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:mysql://mysql-service:3306/ticketing
+    username: root
+    password: admin123
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.MySQLDialect
         default_batch_fetch_size: 100
     open-in-view: false
   kafka:
