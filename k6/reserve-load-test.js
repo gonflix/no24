@@ -1,13 +1,16 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend, Counter } from "k6/metrics";
+import exec from "k6/execution";
 
 // ── 설정 ────────────────────────────────────────────────────────────────────
 const BASE_URL = __ENV.BASE_URL || "http://192.168.1.201:81";
 
 // api-server(큐 서버)에서 발급받은 RS256 JWT를 여기에 붙여넣기
 const JWT_TOKEN = __ENV.JWT_TOKEN || "REPLACE_ME";
-const SEAT_PREFIX = __ENV.SEAT_PREFIX || "A-";
+
+// 좌석 총 수 (1~1000: event=1, 1001~2000: event=2, 2001~3000: event=3)
+const TOTAL_SEATS = 3000;
 
 // ── 커스텀 메트릭 ────────────────────────────────────────────────────────────
 const reserveDurationMs = new Trend("reserve_duration_ms", true);
@@ -53,15 +56,25 @@ const headers = {
   Authorization: `Bearer ${JWT_TOKEN}`,
 };
 
+// ── seatId → eventId 변환 ────────────────────────────────────────────────────
+function getEventId(seatId) {
+  if (seatId <= 1000) return 1;
+  if (seatId <= 2000) return 2;
+  return 3;
+}
+
 // ── 메인 시나리오: VU 1명이 반복 실행 ────────────────────────────────────────
 export default function () {
-  const seatId = `${SEAT_PREFIX}${__VU}-${__ITER}`;
-  // const seatId = `S-${__VU % 10}-0`; // 좌석 충돌 유발용 (10개 좌석만)
+  // 전체 이터레이션 순번(0-based)으로 좌석번호를 순차 배정, 3000개 순환
+  const seatId = (exec.scenario.iterationInTest % TOTAL_SEATS) + 1;
+  // [충돌 시나리오] 10개 좌석(1~10)에 요청 집중 — 좌석 경합/충돌 한계 테스트용
+  // const seatId = (exec.scenario.iterationInTest % 10) + 1;
+  const eventId = getEventId(seatId);
 
   const start = Date.now();
   const res = http.post(
     `${BASE_URL}/api/seats/reserve`,
-    JSON.stringify({ seatId }),
+    JSON.stringify({ eventId, seatId }),
     { headers, tags: { name: "reserve" } },
   );
   const elapsed = Date.now() - start;
@@ -91,34 +104,6 @@ export default function () {
     sleep(1);
   }
 }
-/*
-export default function () {
-  // __VU: VU 번호(1~), __ITER: 이 VU의 반복 횟수(0~)
-  // 조합으로 고유 seatId 생성 → 좌석 충돌 없음
-  const seatId = `${SEAT_PREFIX}${__VU}-${__ITER}`;
-
-  const start  = Date.now();
-  const res    = http.post(
-    `${BASE_URL}/api/seats/reserve`,
-    JSON.stringify({ seatId }),
-    { headers, tags: { name: 'reserve' } }
-  );
-  const elapsed = Date.now() - start;
-
-  const ok = check(res, {
-    'reserve: 200 OK':               (r) => r.status === 200,
-    'reserve: reservationId exists': (r) => r.json('data.reservationId') != null,
-  });
-
-  if (ok) {
-    reserveDurationMs.add(elapsed);
-    cntReserveOk.add(1);
-  } else {
-    cntReserveFail.add(1);
-    sleep(1); // 즉시 재시도 방지
-  }
-}
-*/
 
 // ── 테스트 종료 후 요약 출력 ──────────────────────────────────────────────────
 export function handleSummary(data) {

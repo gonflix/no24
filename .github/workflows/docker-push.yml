@@ -15,10 +15,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -33,7 +33,7 @@ jobs:
       # 1. Go 서버 빌드 및 푸시 (no24-api).
       - name: Build and push Go API
         if: steps.flags.outputs.build_api == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: ./api-server # Go 프로젝트 폴더 경로
           file: ./api-server/no24_api_Dockerfile
@@ -46,7 +46,7 @@ jobs:
       - name: Build and push Java SVC
         if: steps.flags.outputs.build_tkt == 'true'
         # 해킹으로 인한 토큰 탈취 방지위해 버전 고정
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: ./ticketing-server # Java 프로젝트 폴더 경로
           file: ./ticketing-server/no24_svc_Dockerfile

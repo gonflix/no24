@@ -1,12 +1,16 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend, Counter } from "k6/metrics";
+import exec from "k6/execution";
 
 // ── 설정 ────────────────────────────────────────────────────────────────────
 const BASE_URL = __ENV.BASE_URL || "http://192.168.1.201:81";
 
 // api-server에서 발급받은 RS256 JWT를 여기에 붙여넣기
 const JWT_TOKEN = __ENV.JWT_TOKEN || "REPLACE_ME";
+
+// 좌석 총 수 (1~1000: event=1, 1001~2000: event=2, 2001~3000: event=3)
+const TOTAL_SEATS = 3000;
 
 // ── 커스텀 메트릭 ────────────────────────────────────────────────────────────
 // 결제요청 POST ~ 상태 200 수신까지의 실제 처리 시간 (폴링 대기 포함)
@@ -57,14 +61,25 @@ const headers = {
   Authorization: `Bearer ${JWT_TOKEN}`,
 };
 
+// ── seatId → eventId 변환 ────────────────────────────────────────────────────
+function getEventId(seatId) {
+  if (seatId <= 1000) return 1;
+  if (seatId <= 2000) return 2;
+  return 3;
+}
+
 // ── 메인 시나리오: VU 1명이 반복 실행 ────────────────────────────────────────
 export default function () {
-  const seatId = `S-${__VU}-${__ITER}`;
+  // 전체 이터레이션 순번(0-based)으로 좌석번호를 순차 배정, 3000개 순환
+  const seatId = (exec.scenario.iterationInTest % TOTAL_SEATS) + 1;
+  // [충돌 시나리오] 10개 좌석(1~10)에 요청 집중 — 좌석 경합/충돌 한계 테스트용
+  // const seatId = (exec.scenario.iterationInTest % 10) + 1;
+  const eventId = getEventId(seatId);
 
   // ── Step 1: 좌석 예약 (측정 제외 — 준비 단계) ────────────────────────────
   const reserveRes = http.post(
     `${BASE_URL}/api/seats/reserve`,
-    JSON.stringify({ seatId }),
+    JSON.stringify({ eventId, seatId }),
     { headers, tags: { name: "reserve" } },
   );
 
@@ -86,7 +101,7 @@ export default function () {
 
   const payReqRes = http.post(
     `${BASE_URL}/api/payments/request`,
-    JSON.stringify({ reservationId, amount: 50000 }),
+    JSON.stringify({ reservationId, amount: 50000, paymentMethod: "CARD" }),
     { headers, tags: { name: "payment_request" } },
   );
 
