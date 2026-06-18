@@ -33,7 +33,7 @@ public class Reservation {
 
     @Column(nullable = false, unique = true, length = 36) // UUID (보안) / 외부 노출용 ID
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID uuid;
+    private UUID eid;
 
     @Column(nullable = false)
     private String userId;

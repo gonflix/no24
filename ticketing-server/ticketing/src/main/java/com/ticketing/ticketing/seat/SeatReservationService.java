@@ -86,7 +86,7 @@ public class SeatReservationService {
             reservation.setExpiresAt(expiresAt);
             reservationRepository.save(reservation);
 
-            String reservationEid = reservation.getUuid().toString();
+            String reservationEid = reservation.getEid().toString();
             Long reservationId = reservation.getId();
 
             // 5. Redis 캐시 저장 (좌석 키 + 예약UUID 키)

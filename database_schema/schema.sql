@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS reservation (
 CREATE INDEX idx_reservation_seat_id  ON reservation (seat_id);
 CREATE INDEX idx_reservation_user_id ON reservation (user_id);
 CREATE INDEX idx_reservation_status  ON reservation (status);
-CREATE INDEX idx_reservation_uuid  ON reservation (uuid);
+CREATE INDEX idx_reservation_eid  ON reservation (eid);
 -- 만료 스케줄러가 PENDING 상태의 만료 예약을 조회할 때 사용 (MySQL은 부분 인덱스 미지원으로 전체 인덱스로 대체)
 CREATE INDEX idx_reservation_expires ON reservation (expires_at);
 
