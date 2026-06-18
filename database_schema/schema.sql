@@ -41,11 +41,11 @@ CREATE TABLE IF NOT EXISTS reservation (
     reserved_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at  TIMESTAMP    NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_reservation_seat_id (seat_id),
     CONSTRAINT chk_reservation_status CHECK (status IN ('PENDING', 'ONGOING', 'CONFIRMED', 'EXPIRED', 'CANCELED')),
     CONSTRAINT fk_reservation_seat FOREIGN KEY (seat_id) REFERENCES seat (id)
 ) ENGINE=InnoDB;
 
+CREATE INDEX idx_reservation_seat_id  ON reservation (seat_id);
 CREATE INDEX idx_reservation_user_id ON reservation (user_id);
 CREATE INDEX idx_reservation_status  ON reservation (status);
 -- 만료 스케줄러가 PENDING 상태의 만료 예약을 조회할 때 사용 (MySQL은 부분 인덱스 미지원으로 전체 인덱스로 대체)
