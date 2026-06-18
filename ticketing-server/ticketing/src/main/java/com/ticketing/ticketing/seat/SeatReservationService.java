@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ticketing.ticketing.reservation.Reservation;
 import com.ticketing.ticketing.reservation.ReservationRepository;
-import com.ticketing.ticketing.reservation.ReservationStatus;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -73,7 +72,6 @@ public class SeatReservationService {
             if (seat.getStatus() != SeatStatus.AVAILABLE) {
                 return Optional.empty();
             }
-
             Instant now = Instant.now();
             Instant expiresAt = now.plus(RESERVATION_TTL_MINUTES, ChronoUnit.MINUTES);
 

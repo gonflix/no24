@@ -44,7 +44,7 @@ public class SeatExpiryScheduler {
             seat.setStatus(SeatStatus.AVAILABLE);
 
             // Redis 캐시도 즉시 제거 (TTL 만료 전 명시적 삭제)
-            String cacheKey = "reserve:" + seat.getEventId() + ":" + seat.getId();
+            String cacheKey = "reserve:" + seat.getEvent().getId() + ":" + seat.getId();
             redissonClient.getBucket(cacheKey).delete();
 
             log.info("Reservation {} expired, seat {} → AVAILABLE", r.getId(), seat.getId());

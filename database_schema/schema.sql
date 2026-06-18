@@ -38,15 +38,18 @@ CREATE TABLE IF NOT EXISTS reservation (
     eid        CHAR(36)     NOT NULL AUTO_INCREMENT,                    -- exposible ID UUID (보안) / 외부 노출용 ID
     user_id     VARCHAR(255) NOT NULL,
     seat_id     BIGINT       NOT NULL,
+    event_id    INT         NOT NULL,
     status      VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
     reserved_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at  TIMESTAMP    NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT chk_reservation_status CHECK (status IN ('PENDING', 'ONGOING', 'CONFIRMED', 'EXPIRED', 'CANCELED')),
-    CONSTRAINT fk_reservation_seat FOREIGN KEY (seat_id) REFERENCES seat (id)
+    CONSTRAINT fk_reservation_seat FOREIGN KEY (seat_id) REFERENCES seat (id),
+    CONSTRAINT fk_reservation_event FOREIGN KEY (event_id) REFERENCES events (id)
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_reservation_seat_id  ON reservation (seat_id);
+CREATE INDEX idx_reservation_event_id ON reservation (event_id);
 CREATE INDEX idx_reservation_user_id ON reservation (user_id);
 CREATE INDEX idx_reservation_status  ON reservation (status);
 CREATE INDEX idx_reservation_eid  ON reservation (eid);
