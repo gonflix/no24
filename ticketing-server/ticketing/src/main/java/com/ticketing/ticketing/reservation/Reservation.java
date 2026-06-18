@@ -27,9 +27,13 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Reservation {
 
-    @Id
+    @Id // 내부적으로 사용, 외부 노출 X
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 36) // UUID (보안) / 외부 노출용 ID
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private UUID uuid;
 
     @Column(nullable = false)
     private String userId;

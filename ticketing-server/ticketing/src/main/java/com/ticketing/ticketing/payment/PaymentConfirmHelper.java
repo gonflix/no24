@@ -22,13 +22,13 @@ public class PaymentConfirmHelper {
     private final PaymentRepository paymentRepository;
 
     @Transactional
-    public void confirm(UUID reservationId, String userId, long amount, String paymentMethod, Instant paidAt) {
-        reservationRepository.findById(reservationId).ifPresentOrElse(reservation -> {
+    public void confirm(Long reservationid, String userId, long amount, String paymentMethod, Instant paidAt) {
+        reservationRepository.findById(reservationid).ifPresentOrElse(reservation -> {
             reservation.setStatus(ReservationStatus.CONFIRMED);
             reservation.getSeat().setStatus(SeatStatus.SOLD);
 
             paymentRepository.save(Payment.builder()
-                    .reservationId(reservationId)
+                    .reservationId(reservationid)
                     .userId(userId)
                     .totAmount(amount)
                     .paymentMethod(paymentMethod)
@@ -37,7 +37,7 @@ public class PaymentConfirmHelper {
                     .paidAt(paidAt)
                     .build());
 
-            log.info("Payment confirmed in DB. reservationId={}", reservationId);
-        }, () -> log.warn("Reservation not found for confirmation. reservationId={}", reservationId));
+            log.info("Payment confirmed in DB. reservationId={}", reservation.getId());
+        }, () -> log.warn("Reservation not found for confirmation. reservationId={}", reservationid));
     }
 }

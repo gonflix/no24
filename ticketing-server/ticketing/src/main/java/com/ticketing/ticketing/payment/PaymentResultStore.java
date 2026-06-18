@@ -34,22 +34,25 @@ public class PaymentResultStore {
     public void save(PaymentResultEvent result) {
         try {
             String json = objectMapper.writeValueAsString(result);
-            resultMap.put(result.reservationId(), json, TTL_MINUTES, TimeUnit.MINUTES);
-            log.info("Saved payment result. reservationId={}, success={}", result.reservationId(), result.success());
+            resultMap.put(result.reservationEid(), json, TTL_MINUTES, TimeUnit.MINUTES);
+            log.info("Saved payment result. reservationEid={}, success={}", result.reservationEid(),
+                    result.success());
         } catch (JacksonException e) {
-            throw new RuntimeException("Failed to serialize payment result. reservationId=" + result.reservationId(), e);
+            throw new RuntimeException(
+                    "Failed to serialize payment result. reservationEid=" + result.reservationEid(),
+                    e);
         }
     }
 
-    public Optional<PaymentResultEvent> get(String reservationId) {
-        String json = resultMap.get(reservationId);
+    public Optional<PaymentResultEvent> get(String reservationEid) {
+        String json = resultMap.get(reservationEid);
         if (json == null) {
             return Optional.empty();
         }
         try {
             return Optional.of(objectMapper.readValue(json, PaymentResultEvent.class));
         } catch (JacksonException e) {
-            log.error("Failed to deserialize payment result. reservationId={}", reservationId, e);
+            log.error("Failed to deserialize payment result. reservationEid={}", reservationEid, e);
             return Optional.empty();
         }
     }

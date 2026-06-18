@@ -42,8 +42,8 @@ public class SeatReservationService {
      * 좌석 예약 흐름:
      * 1. Redis 캐시 확인 (reserve:{eventId}:{seatId}) → 이미 있으면 409
      * 2. Redisson 분산락 획득 시도 (non-blocking)
-     *    - 락 실패 → 409
-     *    - 락 성공 → 이중 체크 후 Redis 저장 + DB 저장 → 락 해제
+     * - 락 실패 → 409
+     * - 락 성공 → 이중 체크 후 Redis 저장 + DB 저장 → 락 해제
      */
     @Transactional
     public Optional<SeatReservation> reserve(String userId, Long eventId, Long seatId) {
@@ -77,7 +77,7 @@ public class SeatReservationService {
             Instant expiresAt = now.plus(RESERVATION_TTL_MINUTES, ChronoUnit.MINUTES);
 
             // 4. DB 저장 — ID를 직접 세팅하면 JPA가 merge()를 호출해 Hibernate 7에서 오류 발생.
-            //    @GeneratedValue(UUID)에 위임해 persist()가 호출되도록 ID를 세팅하지 않는다.
+            // @GeneratedValue(UUID)에 위임해 persist()가 호출되도록 ID를 세팅하지 않는다.
             Reservation reservation = new Reservation();
             reservation.setUserId(userId);
             reservation.setSeat(seat);
@@ -86,13 +86,14 @@ public class SeatReservationService {
             reservation.setExpiresAt(expiresAt);
             reservationRepository.save(reservation);
 
-            String reservationId = reservation.getId().toString();
+            String reservationEid = reservation.getUuid().toString();
+            Long reservationId = reservation.getId();
 
-            // 5. Redis 캐시 저장 (좌석 키 + 예약ID 키)
+            // 5. Redis 캐시 저장 (좌석 키 + 예약UUID 키)
             SeatReservation seatReservation = new SeatReservation(
-                    reservationId, userId, eventId, seatId, now, expiresAt);
+                    reservationId, reservationEid, userId, eventId, seatId, now, expiresAt);
             seatBucket.set(seatReservation, Duration.ofMinutes(RESERVATION_TTL_MINUTES));
-            redissonClient.<SeatReservation>getBucket(reservationKey(reservationId))
+            redissonClient.<SeatReservation>getBucket(reservationKey(reservationEid))
                     .set(seatReservation, Duration.ofMinutes(RESERVATION_TTL_MINUTES));
 
             seat.setStatus(SeatStatus.RESERVED);
@@ -104,8 +105,8 @@ public class SeatReservationService {
         }
     }
 
-    public Optional<SeatReservation> findByReservationId(String reservationId) {
-        RBucket<SeatReservation> bucket = redissonClient.getBucket(reservationKey(reservationId));
+    public Optional<SeatReservation> findByReservationUuid(String reservationEid) {
+        RBucket<SeatReservation> bucket = redissonClient.getBucket(reservationKey(reservationEid));
         return Optional.ofNullable(bucket.get());
     }
 
@@ -113,7 +114,7 @@ public class SeatReservationService {
         return CACHE_PREFIX + eventId + ":" + seatId;
     }
 
-    private String reservationKey(String reservationId) {
-        return RESERVATION_PREFIX + reservationId;
+    private String reservationKey(String reservationEid) {
+        return RESERVATION_PREFIX + reservationEid;
     }
 }

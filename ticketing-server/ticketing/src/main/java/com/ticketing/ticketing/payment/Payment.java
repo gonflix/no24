@@ -1,7 +1,6 @@
 package com.ticketing.ticketing.payment;
 
 import java.time.Instant;
-import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -31,7 +30,7 @@ public class Payment {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private UUID reservationId;
+    private Long reservationId;
 
     @Column(nullable = false)
     private String userId;

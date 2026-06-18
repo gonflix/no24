@@ -1,7 +1,6 @@
 package com.ticketing.ticketing.payment;
 
 import java.time.Instant;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.scheduling.annotation.Async;
@@ -21,7 +20,8 @@ public class PaymentWorkerService {
     private final PaymentConfirmHelper paymentConfirmHelper;
     private final Counter completedCounter;
 
-    public PaymentWorkerService(PaymentResultStore paymentResultStore,
+    public PaymentWorkerService(
+            PaymentResultStore paymentResultStore,
             PaymentConfirmHelper paymentConfirmHelper,
             MeterRegistry meterRegistry) {
         this.paymentResultStore = paymentResultStore;
@@ -33,6 +33,8 @@ public class PaymentWorkerService {
 
     @Async("paymentWorkerExecutor")
     public void execute(PaymentRequestedEvent event) {
+
+        // Simulate payment processing delay (Stripe, PayPal, etc..)
         try {
             int delayMs = 1000 + ThreadLocalRandom.current().nextInt(1000); // 1~2초 랜덤 지연
             Thread.sleep(delayMs);
@@ -42,11 +44,13 @@ public class PaymentWorkerService {
             return;
         }
 
+        // Simulate payment processing result
         boolean success = true; // 결제 성공률 100% 고정 (테스트용)
         Instant processedAt = Instant.now();
 
         PaymentResultEvent result = new PaymentResultEvent(
                 event.reservationId(),
+                event.reservationEid(),
                 event.userId(),
                 success,
                 success ? "결제가 성공했습니다." : "결제가 실패했습니다.",
@@ -57,7 +61,7 @@ public class PaymentWorkerService {
 
         if (success) {
             paymentConfirmHelper.confirm(
-                    UUID.fromString(event.reservationId()),
+                    event.reservationId(),
                     event.userId(),
                     event.amount(),
                     event.paymentMethod(),

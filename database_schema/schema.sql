@@ -34,7 +34,8 @@ CREATE INDEX idx_seat_event_status ON seat (event_id, status);
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS reservation (
-    id          CHAR(36)     NOT NULL,
+    id          BIGINT       NOT NULL AUTO_INCREMENT,                   -- clustered index (성능 최적화) / 내부적으로 사용, 외부 노출 X
+    eid        CHAR(36)     NOT NULL AUTO_INCREMENT,                    -- exposible ID UUID (보안) / 외부 노출용 ID
     user_id     VARCHAR(255) NOT NULL,
     seat_id     BIGINT       NOT NULL,
     status      VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
@@ -48,6 +49,7 @@ CREATE TABLE IF NOT EXISTS reservation (
 CREATE INDEX idx_reservation_seat_id  ON reservation (seat_id);
 CREATE INDEX idx_reservation_user_id ON reservation (user_id);
 CREATE INDEX idx_reservation_status  ON reservation (status);
+CREATE INDEX idx_reservation_uuid  ON reservation (uuid);
 -- 만료 스케줄러가 PENDING 상태의 만료 예약을 조회할 때 사용 (MySQL은 부분 인덱스 미지원으로 전체 인덱스로 대체)
 CREATE INDEX idx_reservation_expires ON reservation (expires_at);
 
@@ -55,7 +57,7 @@ CREATE INDEX idx_reservation_expires ON reservation (expires_at);
 
 CREATE TABLE IF NOT EXISTS payment (
     id              BIGINT       NOT NULL AUTO_INCREMENT,
-    reservation_id  CHAR(36)     NOT NULL,
+    reservation_id  BIGINT       NOT NULL,
     user_id         VARCHAR(255) NOT NULL,
     tot_amount      BIGINT       NOT NULL,
     payment_method  VARCHAR(50),

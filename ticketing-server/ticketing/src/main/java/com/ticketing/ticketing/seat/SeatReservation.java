@@ -4,7 +4,8 @@ import java.io.Serializable;
 import java.time.Instant;
 
 public record SeatReservation(
-        String reservationId,
+        Long id,
+        String reservationEid,
         String userId,
         Long eventId,
         Long seatId,
