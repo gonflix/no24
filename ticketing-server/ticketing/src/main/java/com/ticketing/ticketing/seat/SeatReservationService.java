@@ -1,10 +1,9 @@
 package com.ticketing.ticketing.seat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
@@ -57,15 +56,7 @@ public class SeatReservationService {
 
         // 2. 분산락 획득 시도
         RLock lock = redissonClient.getLock(LOCK_PREFIX + eventId + ":" + seatId);
-        boolean acquired;
-        try {
-            acquired = lock.tryLock(0, 0, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return Optional.empty();
-        }
-
-        if (!acquired) {
+        if (!lock.tryLock()) {
             return Optional.empty();
         }
 
@@ -84,29 +75,25 @@ public class SeatReservationService {
 
             Instant now = Instant.now();
             Instant expiresAt = now.plus(RESERVATION_TTL_MINUTES, ChronoUnit.MINUTES);
-            UUID reservationId = UUID.randomUUID();
-            SeatReservation seatReservation = new SeatReservation(
-                    reservationId.toString(),
-                    userId,
-                    eventId,
-                    seatId,
-                    now,
-                    expiresAt);
 
-            // 4. Redis 캐시 저장 (좌석 키 + 예약ID 키)
-            seatBucket.set(seatReservation, RESERVATION_TTL_MINUTES, TimeUnit.MINUTES);
-            redissonClient.<SeatReservation>getBucket(reservationKey(seatReservation.reservationId()))
-                    .set(seatReservation, RESERVATION_TTL_MINUTES, TimeUnit.MINUTES);
-
-            // 5. DB 직접 저장
+            // 4. DB 저장 — ID를 직접 세팅하면 JPA가 merge()를 호출해 Hibernate 7에서 오류 발생.
+            //    @GeneratedValue(UUID)에 위임해 persist()가 호출되도록 ID를 세팅하지 않는다.
             Reservation reservation = new Reservation();
-            reservation.setId(reservationId);
             reservation.setUserId(userId);
             reservation.setSeat(seat);
             reservation.setStatus(ReservationStatus.PENDING);
             reservation.setReservedAt(now);
             reservation.setExpiresAt(expiresAt);
             reservationRepository.save(reservation);
+
+            String reservationId = reservation.getId().toString();
+
+            // 5. Redis 캐시 저장 (좌석 키 + 예약ID 키)
+            SeatReservation seatReservation = new SeatReservation(
+                    reservationId, userId, eventId, seatId, now, expiresAt);
+            seatBucket.set(seatReservation, Duration.ofMinutes(RESERVATION_TTL_MINUTES));
+            redissonClient.<SeatReservation>getBucket(reservationKey(reservationId))
+                    .set(seatReservation, Duration.ofMinutes(RESERVATION_TTL_MINUTES));
 
             seat.setStatus(SeatStatus.RESERVED);
             seatRepository.save(seat);
