@@ -47,6 +47,7 @@ public class SeatReservationService {
      */
     @Transactional
     public Optional<SeatReservation> reserve(String userId, Long eventId, Long seatId) {
+
         RBucket<SeatReservation> seatBucket = redissonClient.getBucket(seatCacheKey(eventId, seatId));
 
         // 1. 캐시 히트 시 즉시 409 반환 (락 없이 빠르게 처리)
@@ -76,24 +77,18 @@ public class SeatReservationService {
             Instant now = Instant.now();
             Instant expiresAt = now.plus(RESERVATION_TTL_MINUTES, ChronoUnit.MINUTES);
 
-            // 4. DB 저장 — ID를 직접 세팅하면 JPA가 merge()를 호출해 Hibernate 7에서 오류 발생.
-            // @GeneratedValue(UUID)에 위임해 persist()가 호출되도록 ID를 세팅하지 않는다.
-            Reservation reservation = new Reservation();
-            reservation.setUserId(userId);
-            reservation.setSeat(seat);
-            reservation.setStatus(ReservationStatus.PENDING);
-            reservation.setReservedAt(now);
-            reservation.setExpiresAt(expiresAt);
+            // 4. DB 저장
+            Reservation reservation = Reservation.create(userId, seat, now, expiresAt);
             reservationRepository.save(reservation);
 
-            String reservationEid = reservation.getEid().toString();
-            Long reservationId = reservation.getId();
+            String eid = reservation.getEid().toString();
+            Long id = reservation.getId();
 
             // 5. Redis 캐시 저장 (좌석 키 + 예약UUID 키)
             SeatReservation seatReservation = new SeatReservation(
-                    reservationId, reservationEid, userId, eventId, seatId, now, expiresAt);
+                    id, eid, userId, eventId, seatId, now, expiresAt);
             seatBucket.set(seatReservation, Duration.ofMinutes(RESERVATION_TTL_MINUTES));
-            redissonClient.<SeatReservation>getBucket(reservationKey(reservationEid))
+            redissonClient.<SeatReservation>getBucket(reservationKey(eid))
                     .set(seatReservation, Duration.ofMinutes(RESERVATION_TTL_MINUTES));
 
             seat.setStatus(SeatStatus.RESERVED);

@@ -35,4 +35,10 @@ public class Seat {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SeatStatus status = SeatStatus.AVAILABLE;
+
+    public void reserve() {
+        if (this.status != SeatStatus.AVAILABLE)
+            throw new IllegalStateException("이미 예약된 좌석");
+        this.status = SeatStatus.RESERVED;
+    }
 }

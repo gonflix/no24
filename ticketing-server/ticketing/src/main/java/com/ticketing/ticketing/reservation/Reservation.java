@@ -32,7 +32,6 @@ public class Reservation {
     private Long id;
 
     @Column(nullable = false, unique = true, length = 36) // UUID (보안) / 외부 노출용 ID
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID eid;
 
     @Column(nullable = false)
@@ -51,4 +50,15 @@ public class Reservation {
 
     @Column(nullable = false)
     private Instant expiresAt;
+
+    public static Reservation create(String userId, Seat seat, Instant now, Instant expiresAt) {
+        Reservation r = new Reservation();
+        r.userId = userId;
+        r.eid = UUID.randomUUID(); // 외부 노출용 ID는 생성 시점에 UUID로 세팅
+        r.seat = seat;
+        r.status = ReservationStatus.PENDING;
+        r.reservedAt = now;
+        r.expiresAt = expiresAt;
+        return r;
+    }
 }
