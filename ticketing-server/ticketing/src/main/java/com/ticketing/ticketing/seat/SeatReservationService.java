@@ -55,7 +55,7 @@ public class SeatReservationService {
         }
 
         // 2. 분산락 획득 시도
-        RLock lock = redissonClient.getLock(LOCK_PREFIX + eventId + ":" + seatId);
+        RLock lock = redissonClient.getLock(seatLockKey(eventId, seatId));
         if (!lock.tryLock()) {
             return Optional.empty();
         }
@@ -93,6 +93,11 @@ public class SeatReservationService {
             seatRepository.save(seat);
 
             return Optional.of(seatReservation);
+        } catch (Exception e) {
+            log.error("Error reserving seat {} for event {} by user {}: {}", seatId, eventId, userId, e.getMessage(),
+                    e);
+            throw e;
+
         } finally {
             lock.unlock();
         }
@@ -109,5 +114,9 @@ public class SeatReservationService {
 
     private String reservationKey(String reservationEid) {
         return RESERVATION_PREFIX + reservationEid;
+    }
+
+    private String seatLockKey(Long eventId, Long seatId) {
+        return LOCK_PREFIX + eventId + ":" + seatId;
     }
 }
