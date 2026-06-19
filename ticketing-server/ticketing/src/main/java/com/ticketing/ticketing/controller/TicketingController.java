@@ -51,9 +51,9 @@ public class TicketingController {
 
                 SeatReservation reservation = result.get();
                 return ResponseEntity.ok(ApiResponse.success("좌석 확보에 성공했습니다.", Map.of(
-                                "reservationEid", reservation.reservationEid(),
-                                "seatId", reservation.seatId(),
-                                "expiresAt", reservation.expiresAt().toString())));
+                                "reservationEid", reservation.getReservationEid(),
+                                "seatId", reservation.getSeatId(),
+                                "expiresAt", reservation.getExpiresAt().toString())));
         }
 
         @PostMapping("/payments/request")
@@ -64,14 +64,14 @@ public class TicketingController {
                 SeatReservation reservation = seatReservationService
                                 .findByReservationUuid(request.reservationEid())
                                 .orElseThrow(() -> new IllegalArgumentException("Invalid reservation UUID"));
-                if (!reservation.userId().equals(userId)) {
-                        log.warn("requestPayment: userId mismatch. expected={}, actual={}", reservation.userId(),
+                if (!reservation.getUserId().equals(userId)) {
+                        log.warn("requestPayment: userId mismatch. expected={}, actual={}", reservation.getUserId(),
                                         userId);
                         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                                         .body(ApiResponse.fail("접근 권한이 없습니다."));
                 }
                 try {
-                        paymentProducer.send(new PaymentRequestedEvent(reservation.id(), request.reservationEid(),
+                        paymentProducer.send(new PaymentRequestedEvent(reservation.getId(), request.reservationEid(),
                                         userId, request.amount(), request.paymentMethod()));
                 } catch (IllegalStateException e) {
                         log.error("requestPayment: failed to publish event. reservationEid={}",

@@ -35,7 +35,7 @@ CREATE INDEX idx_seat_event_status ON seat (event_id, status);
 
 CREATE TABLE IF NOT EXISTS reservation (
     id          BIGINT       NOT NULL AUTO_INCREMENT,                   -- clustered index (성능 최적화) / 내부적으로 사용, 외부 노출 X
-    eid        CHAR(36)     NOT NULL AUTO_INCREMENT,                    -- exposible ID UUID (보안) / 외부 노출용 ID
+    eid        CHAR(36)     NOT NULL ,                    -- exposible ID UUID (보안) / 외부 노출용 ID
     user_id     VARCHAR(255) NOT NULL,
     seat_id     BIGINT       NOT NULL,
     event_id    INT         NOT NULL,
