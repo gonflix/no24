@@ -1,0 +1,47 @@
+$ k6 run -e BASE_URL=http://192.168.1.201:81 -e JWT_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6Im1haW4ta2V5IiwidHlwIjoiSldUIn0.eyJhdWQiOlsibm8yNC10a3Qtc2VydmVyIl0sImV2ZW50X2lkIjoiYnRzXzIwMjZfc2VvdWwiLCJleHAiOjE3ODE4NjIxNzMsImlhdCI6MTc4MTg2MTU3MywiaXNzIjoibm8yNC1hcGktc2VydmVyIiwianRpIjoiMmZiNTgxMWY3OWZjMTM1Mjg3NTEyZWFlYjc3ZTVjZmIiLCJzdWIiOjEwMDAwMDEsInVzZXJfaWQiOjEwMDAwMDF9.Hp-dIZn4B4KlYQ0SD4Rc_l90lZn3qL5HBYg0re-AYHTQcxFezswAnuxLzoy_2Z3VYkPny-Pp3vQRYGsalNN9j5oDCqXvp_DQKd_2lTWjIMiqc_nQK9fYV5Vk9tdRjJTYKihvd8uESCCi6TTprwqFeudvUTsRVAnBwdMjzFb9VyjV4hlemLZLsRLzUcB-BRwnHoPKYfcdGkzTbXqatmQXEzC6L1211U3Y620s7vTQAxqv1FcKBuUtCrbV42SYedJICIyUcLcqqyBSrenqqMkyLnZ7cZecl2-4YDPZ-ogg7eHjLT-35XH0RY4VDGWSOc-XT5sJHduYz6nLUv0mK4mi-g k6/reserve-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: k6/reserve-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 50 max VUs, 1m30s max duration (incl. graceful stop):
+              * steady_load: 50 looping VUs for 1m0s (gracefulStop: 30s)
+
+INFO[0060] ══════════════════════════════════════════════
+  Reserve Load Test Summary
+══════════════════════════════════════════════
+  Iterations   : 95871
+  Reserve OK   : 3000
+  Reserve Fail : 92871
+
+  Reserve Latency
+    avg : 31.23ms
+    p50 : 16.00ms
+    p90 : 82.00ms
+    p95 : 91.00ms
+    p99 : N/A
+══════════════════════════════════════════════  source=console
+══════════════════════════════════════════════
+  Reserve Load Test Summary
+══════════════════════════════════════════════
+  Iterations   : 95871
+  Reserve OK   : 3000
+  Reserve Fail : 92871
+
+  Reserve Latency
+    avg : 31.23ms
+    p50 : 16.00ms
+    p90 : 82.00ms
+    p95 : 91.00ms
+    p99 : N/A
+                                                                                                                                                                                                                                                                            
+running (1m00.1s), 00/50 VUs, 95871 complete and 0 interrupted iterations                                                                                                                                                                                                   
+steady_load ✓ [======================================] 50 VUs  1m0s                                                                                                                                                                                                         
+ERRO[0060] thresholds on metrics 'http_req_failed, reserve_fail' have been crossed

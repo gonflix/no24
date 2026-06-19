@@ -30,12 +30,12 @@ export const options = {
     // 시나리오 B: 단계별 부하 증가 (병목 지점 탐색용)
     // steady_load 대신 아래 주석을 해제하면 ramp-up 시나리오로 전환
     // ramp_up: {
-    //   executor: 'ramping-vus',
+    //   executor: "ramping-vus",
     //   startVUs: 0,
     //   stages: [
-    //     { duration: '20s', target: 20  },  // 워밍업
-    //     { duration: '30s', target: 100 },  // 부하 증가
-    //     { duration: '10s', target: 0   },  // 정리
+    //     { duration: "20s", target: 20 }, // 워밍업
+    //     { duration: "30s", target: 100 }, // 부하 증가
+    //     { duration: "10s", target: 0 }, // 정리
     //   ],
     // },
   },
@@ -81,7 +81,7 @@ export default function () {
 
   // ── 상태 판단은 check와 분리 ──────────────────────────────
   const statusOk = res.status === 200;
-  const reservationId = statusOk ? res.json("data.reservationId") : null;
+  const reservationId = statusOk ? res.json("data.reservationEid") : null;
   const bodyOk = reservationId != null;
   const ok = statusOk && bodyOk;
 
@@ -101,7 +101,7 @@ export default function () {
     cntReserveFail.add(1);
     // 실패 시 디버깅용 로그 (VU 적을 때만 켜기)
     // console.log(`FAIL status=${res.status} body=${res.body.substring(0, 200)}`);
-    sleep(1);
+    // sleep(0.5);
   }
 }
 
@@ -120,7 +120,7 @@ export function handleSummary(data) {
     `  Reserve OK   : ${reserveOk}`,
     `  Reserve Fail : ${reserveFail}`,
     "",
-    `  Reserve Latency`,
+    `  Reserve Latency (Per Request)`,
     `    avg : ${ms(dur?.values?.avg)}`,
     `    p50 : ${ms(dur?.values?.["p(50)"] ?? dur?.values?.med)}`,
     `    p90 : ${ms(dur?.values?.["p(90)"])}`,

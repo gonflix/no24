@@ -85,14 +85,14 @@ export default function () {
 
   if (reserveRes.status !== 200) {
     cntReserveFail.add(1);
-    sleep(0.5);
+    // sleep(0.5);
     return;
   }
 
-  const reservationId = reserveRes.json("data.reservationId");
-  if (!reservationId) {
+  const reservationEid = reserveRes.json("data.reservationEid");
+  if (!reservationEid) {
     cntReserveFail.add(1);
-    sleep(0.5);
+    // sleep(0.5);
     return;
   }
 
@@ -101,7 +101,7 @@ export default function () {
 
   const payReqRes = http.post(
     `${BASE_URL}/api/payments/request`,
-    JSON.stringify({ reservationId, amount: 50000, paymentMethod: "CARD" }),
+    JSON.stringify({ reservationEid, amount: 50000, paymentMethod: "CARD" }),
     { headers, tags: { name: "payment_request" } },
   );
 
@@ -110,7 +110,7 @@ export default function () {
   });
 
   if (!payReqOk) {
-    sleep(0.5);
+    // sleep(0.5);
     return;
   }
 
@@ -121,7 +121,7 @@ export default function () {
 
   while (Date.now() - payStart < TIMEOUT_MS) {
     const statusRes = http.get(
-      `${BASE_URL}/api/payments/status/${reservationId}`,
+      `${BASE_URL}/api/payments/status/${reservationEid}`,
       { headers, tags: { name: "payment_status" } },
     );
 

@@ -1,0 +1,55 @@
+$ k6 run \
+-e BASE_URL=http://192.168.1.201:81 \
+-e JWT_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6Im1haW4ta2V5IiwidHlwIjoiSldUIn0.eyJhdWQiOlsibm8yNC10a3Qtc2VydmVyIl0sImV2ZW50X2lkIjoiYnRzXzIwMjZfc2VvdWwiLCJleHAiOjE3ODE4NjcwMzcsImlhdCI6MTc4MTg2NjQzNywiaXNzIjoibm8yNC1hcGktc2VydmVyIiwianRpIjoiM2EwMzk0YjExNDQ5ZjE0ODMxN2ViZjBiNTk1ZjUzZWMiLCJzdWIiOjEwMDAwMDEsInVzZXJfaWQiOjEwMDAwMDF9.NVYyC8KxFXbZDD2MZYW7I0tN0uXYWghIsCTXmRAkJaLEgw6nexKbmME3gVneTvUcDnJ5dtQiZCMx7fD0AtneXRP6qiJv_tTKXkZ6YRUXJ9ZwYysAdvBD9YoyaACvxSxzsh2LtxyoFpv5Fjd0ZFKPBsRpHhhV-9vn-KaW7faQmRgFqXgAJdpJBgEpfmkH7qXPUmy28dCAMJ68TA-L6CwXC1xKPy9wy8hbxjszTBjecIu0A7JlXS7Gbt9K_67UloqP2K64XXnbs8oXBwgj5cpmnTSdW5FFYxQt_L7B9r-LOVI2hkf8qzmdRtjEaZn6Lfwio15yPlTbqEhZnQbQAFPlkw \
+k6/payment-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: k6/payment-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 50 max VUs, 1m30s max duration (incl. graceful stop):
+              * steady_load: 50 looping VUs for 1m0s (gracefulStop: 30s)
+
+INFO[0062] ══════════════════════════════════════════════
+  Payment Load Test Summary
+  (측정 범위: 결제 요청 POST ~ 폴링 완료)
+══════════════════════════════════════════════
+  Test Duration    : 62.3s
+  Iterations       : 1481
+  Completed        : 1481
+  Timeout (>30s)   : 0
+  Reserve fail     : 0  
+
+  E2E Latency  (결제 POST → 폴링 200 수신)
+    avg : 2.03s
+    p50 : 2.01s
+    p90 : 2.03s
+    p95 : 2.06s
+    p99 : N/A
+══════════════════════════════════════════════  source=console
+══════════════════════════════════════════════
+  Payment Load Test Summary
+  (측정 범위: 결제 요청 POST ~ 폴링 완료)
+══════════════════════════════════════════════
+  Test Duration    : 62.3s
+  Iterations       : 1481
+  Completed        : 1481
+  Timeout (>30s)   : 0
+  Reserve fail     : 0  
+
+  E2E Latency  (결제 POST → 폴링 200 수신)
+    avg : 2.03s
+    p50 : 2.01s
+    p90 : 2.03s
+    p95 : 2.06s
+    p99 : N/A
+                                                                                                                                                                                                                                                                            
+running (1m02.3s), 00/50 VUs, 1481 complete and 0 interrupted iterations                                                                                                                                                                                                    
+steady_load ✓ [======================================] 50 VUs  1m0s   
