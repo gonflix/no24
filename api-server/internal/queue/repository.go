@@ -4,204 +4,93 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strconv"
-	"time"
 
-	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/redis/go-redis/v9"
 )
 
 type WaitingQueueRepository struct {
-	client    *redis.Client
-	Snapshots *xsync.Map[string, *WaitingQueueSnapshot]
-}
-
-func NewWaitingQueueRepository(ctx context.Context) *WaitingQueueRepository {
-	// Redis Client 생성
-	client := redis.NewClient(&redis.Options{
-		Addr: "redis-service:6379", // 같은 클러스터 내에 있으므로 Service 이름으로 호스트 지정가능
-	})
-	if err := client.Ping(ctx).Err(); err != nil {
-		slog.Error("Redis 연결 실패", "error", err)
-		panic(err)
-	} 
-
-	slog.Info("Redis connected", "addr", "redis-service:6379")
-
-	wqRepo := &WaitingQueueRepository{
-		client:    client,
-		Snapshots: xsync.NewMap[string, *WaitingQueueSnapshot](),
-		// key: "waiting:" + event_id,
-	}
-
-	// (MySQL) Active인 이벤트만 가져와서 Snapshot 초기화
-	err := wqRepo.InitSnapshot(ctx)
-	if err != nil {
-		slog.Error("InitSnapshot failed", "error", err)
-		panic(err)
-	}
-
-	return wqRepo
-}
-
-func (r *WaitingQueueRepository) InitSnapshot(ctx context.Context) error {
-	events, err := ReloadEvents(ctx)
-	if err != nil {
-		return err
-	}
-	for _, event := range events {
-		r.Snapshots.Store(event.Name, NewWaitingQueueSnapshot())
-	}
-	slog.Info("Snapshots initialized", "count", len(events))
-	return nil
-}
-
-func (r *WaitingQueueRepository) Close() { r.client.Close() }
-
-func (r *WaitingQueueRepository) Add(ctx context.Context, event_id string, user_id int64) (rank int64, err error) {
-	ss, ok := r.Snapshots.Load(event_id)
-	if !ok {
-		return -1, ErrQueueEmpty
-	}
-	
-	score, err := r.enqueue(ctx, event_id, user_id)
-	if err != nil {
-		return -1, err
-	}
-	rank, err = r.getRank(ctx, event_id, user_id)
-	if err != nil {
-		return -1, err
-	}
-
-	slog.Info("user enqueued", "event_id", event_id, "user_id", user_id, "rank", rank)
-
-	ss.Add(user_id, rank, score)
-
-	return rank, nil
-}
-
-func (r *WaitingQueueRepository) Get(ctx context.Context, event_id string, user_id int64) (rank int64, err error) {
-	ss, ok := r.Snapshots.Load(event_id)
-	if !ok {
-		slog.Error("snapshot not found", "event_id", event_id)
-		return -1, ErrQueueEmpty //?
-	}
-
-	// Tier1: Redis에 직접 확인
-	if ss.isTier1(ctx, user_id) {
-		return r.getRank(ctx, event_id, user_id)
-	}
-
-	// Tier2: Snapshot에서 확인
-	rank, ok = ss.GetRank(ctx, user_id)
-	if !ok {
-		return -1, ErrQueueEmpty //?
-	}
-
-	return rank, nil
-}
-
-func (r *WaitingQueueRepository) enqueue(ctx context.Context, event_id string, user_id int64) (score float64, err error) {
-	score = float64(time.Now().UnixNano())
-	key := buildKey(event_id)
-	member := strconv.FormatInt(user_id, 10)
-	// slog.Info("redis enqueue start", "key", key, "event_id", event_id, "user_id", user_id, "member", member, "score", score)
-
-	err = r.client.ZAdd(ctx, key, redis.Z{
-		Score:  score,
-		Member: member,
-	}).Err()
-	if err != nil {
-		slog.Error("redis enqueue failed", "key", key, "event_id", event_id, "user_id", user_id, "error", err)
-		return score, err
-	}
-	// size, sizeErr := r.client.ZCard(ctx, key).Result()
-	// if sizeErr != nil {
-	// 	slog.Error("redis enqueue zcard failed", "key", key, "event_id", event_id, "user_id", user_id, "error", sizeErr)
-	// } else {
-	// 	slog.Info("redis enqueue done", "key", key, "event_id", event_id, "user_id", user_id, "zcard", size)
-	// }
-	return score, err
+	client *redis.Client
+	Events []string
 }
 
 var ErrQueueEmpty = errors.New("waiting room is empty")
 
-func (r *WaitingQueueRepository) Pop(ctx context.Context, event_id string) (user_id int64, err error) {
-	user_id, err = r.dequeue(ctx, event_id)
+func NewWaitingQueueRepository(ctx context.Context) *WaitingQueueRepository {
+	client := redis.NewClient(&redis.Options{
+		Addr: "redis-service:6379",
+	})
+	if err := client.Ping(ctx).Err(); err != nil {
+		slog.Error("Redis 연결 실패", "error", err)
+		panic(err)
+	}
+	slog.Info("Redis connected", "addr", "redis-service:6379")
+
+	events, err := ReloadEvents(ctx)
 	if err != nil {
-		return -1, err
+		slog.Error("ReloadEvents failed", "error", err)
+		panic(err)
 	}
-	if ss, ok := r.Snapshots.Load(event_id); ok {
-		ss.Delete(user_id)
+
+	names := make([]string, 0, len(events))
+	for _, e := range events {
+		names = append(names, e.Name)
 	}
-	return user_id, nil
+
+	return &WaitingQueueRepository{
+		client: client,
+		Events: names,
+	}
 }
 
-func (r *WaitingQueueRepository) dequeue(ctx context.Context, event_id string) (user_id int64, err error) {
-	results, err := r.client.ZPopMin(ctx, buildKey(event_id), 1).Result() // minium score
+func (r *WaitingQueueRepository) Close() { r.client.Close() }
+
+// Add enqueues the user and returns their monotonic ticket number N.
+// Position in queue = N - 1 - served (0 means it's their turn).
+func (r *WaitingQueueRepository) Add(ctx context.Context, event_id string, user_id int64) (ticketN int64, err error) {
+	ticketN, err = r.client.Incr(ctx, totalKey(event_id)).Result()
 	if err != nil {
+		slog.Error("redis incr total failed", "event_id", event_id, "user_id", user_id, "error", err)
 		return -1, err
 	}
-
-	if len(results) == 0 {
-		return -1, ErrQueueEmpty
-	}
-
-	user_id, err = strconv.ParseInt(results[0].Member.(string), 10, 64)
-	if err != nil {
-		return -1, err
-	}
-	return user_id, nil
+	slog.Info("user enqueued", "event_id", event_id, "user_id", user_id, "ticketN", ticketN)
+	return ticketN, nil
 }
 
-func (r *WaitingQueueRepository) getRank(ctx context.Context, event_id string, user_id int64) (rank int64, err error) {
-	user_id_str := strconv.FormatInt(user_id, 10)
-	rank, err = r.client.ZRank(ctx, buildKey(event_id), user_id_str).Result()
-	if err != nil {
-		return -1, err
+// Pop advances the served counter by 1 if there are users waiting.
+// Returns ErrQueueEmpty when served >= total.
+func (r *WaitingQueueRepository) Pop(ctx context.Context, event_id string) error {
+	total, err := r.client.Get(ctx, totalKey(event_id)).Int64()
+	if err == redis.Nil {
+		return ErrQueueEmpty
 	}
-	return rank+1, nil
-}
-
-// N분마다 반복?
-func (r *WaitingQueueRepository) UpdateSnapshot(ctx context.Context, event_id string) error {
-	// ZREVRANGE를 사용하여 전체 순위 리스트를 가져옴
-	// 대용량일 경우 SCAN이나 분할 조회를 고려할 수 있으나
-	// 수십만 건은 ZREVRANGE로 한 번에 가져와도 Redis 성능상 큰 무리가 없습니다.
-	vals, err := r.client.ZRangeWithScores(ctx, buildKey(event_id), 0, -1).Result()
 	if err != nil {
 		return err
 	}
-	newData := make(map[int64]WaitingMember, len(vals))
-	for i, z := range vals {
-		user_id, err := strconv.ParseInt(z.Member.(string), 10, 64)
-		if err != nil {
-			slog.Error("error parsing user_id", "member", z.Member, "error", err, "event_id", event_id)
-			continue
-		}
-		newData[user_id] = WaitingMember{
-			Rank:  int64(i + 1),
-			Score: z.Score,
-		}
+
+	served, err := r.client.Get(ctx, servedKey(event_id)).Int64()
+	if err != nil && err != redis.Nil {
+		return err
 	}
 
-	if len(vals) == 0 {
-		slog.Info("snapshot empty", "event_id", event_id)
-		return nil
+	if served >= total {
+		return ErrQueueEmpty
 	}
 
-	// 원자적으로 스냅샷 교체
-	ss, _ := r.Snapshots.LoadOrStore(event_id, NewWaitingQueueSnapshot())
-	ss.Mu.Lock()
-	ss.Members = newData //? 깊은복사 얕은복사
-	ss.FetchedAt = time.Now()
-	ss.Mu.Unlock()
-
-	slog.Info("snapshot updated", "event_id", event_id, "size", len(newData))
-
-	return nil
+	return r.client.Incr(ctx, servedKey(event_id)).Err()
 }
 
-func buildKey(event_id string) string {
-	return "waiting:" + event_id
+func (r *WaitingQueueRepository) GetServedCount(ctx context.Context, event_id string) (int64, error) {
+	val, err := r.client.Get(ctx, servedKey(event_id)).Int64()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	return val, err
 }
+
+// Redis Counter Keys
+//
+// totalKey counts how many users have joined the queue (monotonic).
+func totalKey(event_id string) string { return "queue:total:" + event_id }
+
+// servedKey counts how many users have been served (advanced by Pop).
+func servedKey(event_id string) string { return "queue:served:" + event_id }
