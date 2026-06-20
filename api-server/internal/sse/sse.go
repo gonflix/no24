@@ -80,6 +80,7 @@ func HandleSSE(
 				}
 				rc.Flush()
 				slog.Info("sse jwt issued and closed", "user_id", userID)
+				time.Sleep(1 * time.Second) // Give the client a moment to receive the token before closing.
 				return nil
 			}
 
